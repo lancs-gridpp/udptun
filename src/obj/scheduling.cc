@@ -1,0 +1,181 @@
+// -*- c-basic-offset: 2; indent-tabs-mode: nil -*-
+
+/*
+ * Copyright (c) 2025, Lancaster University
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above
+ *    copyright notice, this list of conditions and the following
+ *    disclaimer in the documentation and/or other materials provided
+ *    with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <sys/epoll.h>
+
+#include <csignal>
+
+#include <system_error>
+
+#include "events.hh"
+#include "descriptor.hh"
+#include "timed.hh"
+#include "idle.hh"
+#include "scheduling.hh"
+
+void Scheduler::enqueue(Event *mom)
+{
+  if (mom->prio_appl != 0) return;
+  prio_t p = mom->prio();
+  queues[p].insert(mom);
+  mom->prio_appl = p;
+}
+
+void Scheduler::dequeue(Event *mom)
+{
+  if (mom->prio_appl != 0) {
+    queues[mom->prio_appl].erase(mom);
+    mom->prio_appl = 0;
+  }
+}
+#include <iostream>
+
+int Scheduler::timeout()
+{
+  /* We'll use a zero timeout if we have anything queued. */
+  for (auto &qelem : queues) {
+    if (qelem.second.empty()) continue;
+    return 0;
+  }
+
+  /* We'll use a zero timeout if we have idle events. */
+  if (!idleness.empty()) return 0;
+
+  /* We'll use an indefinite timeout if we have no timed events. */
+  if (table.empty()) return -1;
+
+  /* Eliminate empty leading table elements. */
+  for (auto iter = table.begin(); iter != table.end() && iter->second.empty();
+       iter = table.begin())
+    table.erase(iter);
+
+  /* How long is it in milliseconds until the earliest timed event?
+     This will be used as the timeout. */
+  RealTime now;
+  now.now();
+  RealTime first = table.begin()->first;
+  //std::cerr << "now=" << std::string(now)
+  //          << "; first=" << std::string(first) << std::endl;
+  TimePeriod delay = first - now;
+  //std::cerr << "delay " << delay.amount << " unit " << delay.unit << std::endl;
+  delay.clamp_nonnegative();
+  /* TODO: Clamp actual result to INT_MAX or less. */
+  int res = delay.to_milliseconds();
+  //std::cerr << "timeout is " << res << std::endl;
+  return res;
+}
+
+void Scheduler::poll()
+{
+  struct epoll_event events[20];
+  int nfds = epoll_pwait(epfd,
+                         events, sizeof events / sizeof events[0],
+                         timeout(),
+                         &sigmsk);
+
+  if (nfds < 0) {
+    switch (errno) {
+    default:
+      throw std::system_error(errno, std::system_category(), "epoll_pwait");
+
+    case EINTR:
+      /* A signal occurred, so we should restart polling with fresh
+         arguments. */
+      return;
+    }
+  }
+
+  /* Place triggered descriptor events in queues, storing the event
+     set in the event object. */
+  for (int i = 0; i < nfds; i++) {
+    auto ptr = static_cast<DescriptorEvent *>(events[i].data.ptr);
+    ptr->update(events[i].events);
+    enqueue(ptr);
+  }
+
+  /* Collect timed events. */
+  RealTime now;
+  now.now();
+  for (auto iter = table.begin(); iter != table.upper_bound(now); iter++)
+    for (auto miter = iter->second.begin();
+         miter != iter->second.end(); miter++) {
+      auto ptr = *miter;
+      ptr->when.zero();
+      enqueue(ptr);
+    }
+  table.erase(table.begin(), table.upper_bound(now));
+
+  /* Collect idle events. */
+  for (auto ptr : idleness)
+    enqueue(ptr);
+  idleness.clear();
+
+  /* Notify events of the highest non-empty priority. */
+  for (auto &item : queues) {
+    auto &queue = item.second;
+    if (queue.empty()) continue;
+
+    /* Remove events from this queue and invoke them. */
+    for (auto iter = queue.begin(); iter != queue.end();
+         iter = queue.begin()) {
+      auto ptr = *iter;
+      queue.erase(iter);
+      ptr->prio_appl = 0;
+      ptr->notify();
+    }
+    break;
+  }
+}
+
+void Scheduler::signal_mask(const sigset_t &sigmsk)
+{
+  this->sigmsk = sigmsk;
+}
+
+Scheduler::Scheduler() : epfd(-1)
+{
+  if (sigemptyset(&sigmsk) < 0)
+    throw std::system_error(errno, std::system_category(), "sigemptyset");
+
+  epfd = epoll_create1(0);
+  if (epfd < 0)
+    throw std::system_error(errno, std::system_category(), "epoll_create0");
+}
+
+Scheduler::~Scheduler()
+{
+  ::close(epfd);
+}
