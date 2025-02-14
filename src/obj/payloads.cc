@@ -140,6 +140,7 @@ PayloadQueue::PayloadQueue(std::size_t max_mem,
     user_ready(false)
 {
   /* Get the list of matching queue files. */
+  std::filesystem::create_directory(dir);
   for (const auto &entry : std::filesystem::directory_iterator(dir)) {
     const auto &fn = entry.path();
     if (fn.extension() != ".queue") continue;
