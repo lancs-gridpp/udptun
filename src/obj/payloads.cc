@@ -258,12 +258,15 @@ void PayloadQueue::awaken()
 
 PayloadQueue::~PayloadQueue()
 {
-  /* Choose a filename prior to existing ones, and save in-memory
-     payloads to it. */
-  index_t key = (queue_fns.empty() ? now_index() : queue_fns.begin()->first) - 1;
-  auto nf = make_queue_file(key);
-  if (out.is_open()) out.close();
-  out.open(nf, out.out | out.binary);
-  for (auto &item : queue)
-    item.save(out);
+  if (!queue.empty()) {
+    /* Choose a filename prior to existing ones, and save in-memory
+       payloads to it. */
+    index_t key =
+      (queue_fns.empty() ? now_index() : queue_fns.begin()->first) - 1;
+    auto nf = make_queue_file(key);
+    if (out.is_open()) out.close();
+    out.open(nf, std::ios::binary);
+    for (auto &item : queue)
+      item.save(out);
+  }
 }
