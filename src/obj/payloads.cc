@@ -190,8 +190,7 @@ bool PayloadQueue::load_head_file()
 
 void PayloadQueue::attempt_delivery()
 {
-  if (!user_ready)
-    return;
+  assert(user_ready);
 
   /* Offer items from the in-memory queue until refused. */
   for ( ; ; ) {
@@ -222,7 +221,7 @@ void PayloadQueue::push(const unsigned char *base, std::size_t len)
     sz_mem += len;
 
     /* Let the user know we have a queue entry available. */
-    if (was_empty)
+    if (was_empty && user_ready)
       attempt_delivery();
     return;
   }
