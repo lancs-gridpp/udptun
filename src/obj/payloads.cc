@@ -235,7 +235,8 @@ void PayloadQueue::push(const void *base, std::size_t len)
     queue_fns[key] = nf;
 
     /* Open the new file for appending, and reset the current size. */
-    out.open(nf, out.out | out.app | out.binary);
+    if (out.is_open()) out.close();
+    out.open(nf, out.out | out.binary);
     sz_out = 0;
   }
 
@@ -257,6 +258,7 @@ PayloadQueue::~PayloadQueue()
      payloads to it. */
   index_t key = (queue_fns.empty() ? now_index() : queue_fns.begin()->first) - 1;
   auto nf = make_queue_file(key);
+  if (out.is_open()) out.close();
   out.open(nf, out.out | out.binary);
   for (auto &item : queue)
     item.save(out);
