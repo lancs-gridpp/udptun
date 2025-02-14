@@ -229,7 +229,7 @@ void PayloadQueue::push(const unsigned char *base, std::size_t len)
     return;
   }
 
-  if (!out.is_open() || sz_out + len + 2 > max_mem) {
+  if (!out.is_open() || sz_out + len >= max_mem) {
     /* We need a new file.  Determine its time and name. */
     index_t key = now_index();
     auto nf = make_queue_file(key);
