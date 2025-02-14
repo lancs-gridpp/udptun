@@ -126,8 +126,10 @@ Payload::~Payload()
 
 void Payload::clear()
 {
-  if (base_)
+  if (base_) {
     delete[] base_;
+    base_ = nullptr;
+  }
   len_ = 0;
 }
 
