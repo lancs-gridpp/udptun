@@ -240,7 +240,7 @@ void PayloadQueue::push(const void *base, std::size_t len)
 
     /* Open the new file for appending, and reset the current size. */
     if (out.is_open()) out.close();
-    out.open(nf, out.out | out.binary);
+    out.open(nf, std::ios::binary);
     sz_out = 0;
   }
 
