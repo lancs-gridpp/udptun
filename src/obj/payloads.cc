@@ -158,7 +158,7 @@ PayloadQueue::index_t PayloadQueue::now_index()
 std::filesystem::path PayloadQueue::make_queue_file(index_t key)
 {
   std::stringstream txt;
-  txt << std::hex << ".queue" << key;
+  txt << std::hex << key << ".queue";
   std::filesystem::path nf(dir);
   nf /= txt.str();
   return nf;
