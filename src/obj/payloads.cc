@@ -47,6 +47,7 @@
 #include <chrono>
 
 #include "payloads.hh"
+#include "destruction.hh"
 
 payload_t make_payload(const unsigned char *buf, std::size_t len)
 {
@@ -75,15 +76,16 @@ bool Payload::load(std::ifstream &in)
   if (in.fail()) return false;
   std::size_t len = (lenbytes[0] << 8) | lenbytes[1];
   unsigned char *base = new unsigned char[len];
-  in.read(reinterpret_cast<char *>(base), len);
-  if (in.fail()) {
-    delete[] base;
-    return false;
+  {
+    LegacyDestructor([&base]() { if (base) delete[] base; });
+    in.read(reinterpret_cast<char *>(base), len);
+    if (in.fail())
+      return false;
+    clear();
+    base_ = base, base = nullptr;
+    len_ = len;
+    return true;
   }
-  clear();
-  base_ = base;
-  len_ = len;
-  return true;
 }
 
 Payload::Payload(Payload &&rhs)
