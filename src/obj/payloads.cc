@@ -151,7 +151,7 @@ PayloadQueue::PayloadQueue(std::size_t max_mem,
 
 PayloadQueue::index_t PayloadQueue::now_index()
 {
-  return std::chrono::duration_cast<std::chrono::seconds>
+  return std::chrono::duration_cast<std::chrono::nanoseconds>
     (std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
