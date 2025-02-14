@@ -55,28 +55,27 @@ payload_t make_payload(const unsigned char *buf, std::size_t len)
   return std::shared_ptr<std::vector<unsigned char>>(r);
 }
 
-static void save(Payload::bofstream &out,
-                 const unsigned char *base, std::size_t len)
+static void save(std::ofstream &out,
+                 const void *base, std::size_t len)
 {
   unsigned char lenbytes[] = { (unsigned char) (len >> 8), (unsigned char) len };
-  out.write(lenbytes, sizeof lenbytes);
-  out.write(base, len);
+  out.write(reinterpret_cast<const char *>(lenbytes), sizeof lenbytes);
+  out.write(reinterpret_cast<const char *>(base), len);
 }
 
-void Payload::save(std::basic_ofstream<unsigned char,
-                   std::char_traits<unsigned char>> &out)
+void Payload::save(std::ofstream &out)
 {
   ::save(out, base_, len_);
 }
 
-bool Payload::load(bifstream &in)
+bool Payload::load(std::ifstream &in)
 {
   unsigned char lenbytes[2];
-  in.read(lenbytes, sizeof lenbytes);
+  in.read(reinterpret_cast<char *>(lenbytes), sizeof lenbytes);
   if (in.fail()) return false;
   std::size_t len = (lenbytes[0] << 8) | lenbytes[1];
   unsigned char *base = new unsigned char[len];
-  in.read(base, len);
+  in.read(reinterpret_cast<char *>(base), len);
   if (in.fail()) {
     delete[] base;
     return false;
@@ -112,7 +111,7 @@ bool Payload::get(struct iovec &into)
   return true;
 }
 
-Payload::Payload(const unsigned char *base, std::size_t len)
+Payload::Payload(const void *base, std::size_t len)
   : base_(new unsigned char[len]), len_(len)
 {
   memcpy(base_, base, len);
@@ -164,7 +163,7 @@ std::filesystem::path PayloadQueue::make_queue_file(index_t key)
   return nf;
 }
 
-bool PayloadQueue::load1(Payload::bifstream &fin)
+bool PayloadQueue::load1(std::ifstream &fin)
 {
   Payload pl;
   if (pl.load(fin)) {
@@ -181,7 +180,7 @@ bool PayloadQueue::load_head_file()
     return false;
   auto pos = queue_fns.begin();
   auto ofn = pos->second;
-  Payload::bifstream fin(ofn, fin.binary);
+  std::ifstream fin(ofn, std::ios::binary);
   while (load1(fin))
     ;
   fin.close();
@@ -215,7 +214,7 @@ void PayloadQueue::attempt_delivery()
   }
 }
 
-void PayloadQueue::push(const unsigned char *base, std::size_t len)
+void PayloadQueue::push(const void *base, std::size_t len)
 {
   if (queue_fns.empty() && sz_mem + len < max_mem) {
     /* Add the entry to memory, and account for it. */

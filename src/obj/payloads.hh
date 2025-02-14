@@ -55,16 +55,12 @@ class Payload {
   std::size_t len_;
 
 public:
-  typedef std::basic_ofstream<unsigned char,
-                              std::char_traits<unsigned char>> bofstream;
-  typedef std::basic_ifstream<unsigned char,
-                              std::char_traits<unsigned char>> bifstream;
   Payload() : base_(nullptr), len_(0) { }
-  Payload(const unsigned char *base, std::size_t len);
+  Payload(const void *base, std::size_t len);
   Payload(Payload &&);
   Payload &operator =(Payload &&);
-  void save(bofstream &out);
-  bool load(bifstream &in);
+  void save(std::ofstream &out);
+  bool load(std::ifstream &in);
 
   /* Check for contents. */
   operator bool() { return base_; }
@@ -98,11 +94,11 @@ private:
 
   std::map<index_t, std::filesystem::path> queue_fns;
   std::size_t sz_out;
-  Payload::bofstream out;
+  std::ofstream out;
 
   static index_t now_index();
   std::filesystem::path make_queue_file(index_t key);
-  bool load1(Payload::bifstream &);
+  bool load1(std::ifstream &);
 
   /* Load the entries from the oldest file into the queue, delete the
      file, and return true; otherwise, return false. */
@@ -117,7 +113,7 @@ public:
                const std::filesystem::path &dir, user_t);
 
   /* Add another payload to the queue. */
-  void push(const unsigned char *, std::size_t);
+  void push(const void *, std::size_t);
 
   /* Acknowledge that the user is ready to receive again. */
   void awaken();
