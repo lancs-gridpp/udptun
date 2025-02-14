@@ -178,17 +178,19 @@ bool PayloadQueue::load1(std::ifstream &fin)
 
 bool PayloadQueue::load_head_file()
 {
-  if (queue_fns.empty())
-    return false;
-  auto pos = queue_fns.begin();
-  auto ofn = pos->second;
-  std::ifstream fin(ofn, std::ios::binary);
-  while (load1(fin))
-    ;
-  fin.close();
-  queue_fns.erase(pos);
-  std::filesystem::remove(ofn);
-  return !queue.empty();
+  do {
+    if (queue_fns.empty())
+      return false;
+    auto pos = queue_fns.begin();
+    auto ofn = pos->second;
+    std::ifstream fin(ofn, std::ios::binary);
+    while (load1(fin))
+      ;
+    fin.close();
+    queue_fns.erase(pos);
+    std::filesystem::remove(ofn);
+  } while (queue.empty());
+  return true;
 }
 
 
