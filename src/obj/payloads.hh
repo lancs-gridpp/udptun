@@ -86,7 +86,7 @@ struct PayloadQueue {
   typedef std::function<bool(Payload &&)> user_t;
 
 private:
-  const std::string dir;
+  const std::filesystem::path dir;
   const std::size_t max_mem;
 
   std::size_t sz_mem;
@@ -114,7 +114,7 @@ private:
 
 public:
   PayloadQueue(std::size_t max_mem,
-               const std::string &dir, user_t);
+               const std::filesystem::path &dir, user_t);
 
   /* Add another payload to the queue. */
   void push(const unsigned char *, std::size_t);

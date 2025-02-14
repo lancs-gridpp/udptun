@@ -132,7 +132,7 @@ void Payload::clear()
 }
 
 PayloadQueue::PayloadQueue(std::size_t max_mem,
-                           const std::string &dir,
+                           const std::filesystem::path &dir,
                            user_t user)
   : dir(dir), max_mem(max_mem), sz_mem(0), user(user),
     user_ready(false)
