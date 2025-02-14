@@ -42,6 +42,10 @@ udptun_obj += idle
 udptun_obj += timed
 udptun_lib += -lyaml-cpp
 
+test_binaries.cc += testpayload
+testpayload_obj += payloads
+testpayload_obj += testpayload
+
 include binodeps.mk
 
 all:: installed-binaries VERSION BUILD
