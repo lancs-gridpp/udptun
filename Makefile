@@ -30,6 +30,7 @@ udptun_obj += payloads
 udptun_obj += config
 udptun_obj += exits
 udptun_obj += ears
+udptun_obj += quotas
 udptun_obj += main
 udptun_obj += tunnels
 udptun_obj += empties
