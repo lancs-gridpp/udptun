@@ -52,13 +52,13 @@ void Quota::check()
 {
   for (auto iter = ages.begin(); total > max && iter != ages.end(); iter++) {
     for (auto up : iter->second) {
-      up->discard();
+      (*up)();
       break;
     }
   }
 }
 
-void Quota::increase(User &user, size_t sz)
+void Quota::increase(const user_t &user, size_t sz)
 {
   auto pos = users.try_emplace(&user);
   auto &counter = pos.first->second.amount;
@@ -67,7 +67,7 @@ void Quota::increase(User &user, size_t sz)
   check();
 }
 
-void Quota::decrease(User &user, size_t sz)
+void Quota::decrease(const user_t &user, size_t sz)
 {
   auto pos = users.try_emplace(&user);
   auto &counter = pos.first->second.amount;
@@ -85,7 +85,7 @@ void Quota::decrease(User &user, size_t sz)
     total -= am;
 }
 
-void Quota::forget(User &user)
+void Quota::forget(const user_t &user)
 {
   /* Find the user entry.  Do nothing if not there. */
   auto pos = users.find(&user);
@@ -104,7 +104,7 @@ void Quota::forget(User &user)
   users.erase(pos);
 }
 
-void Quota::erase_from_sequence(User &user, epochtime_t when)
+void Quota::erase_from_sequence(const user_t &user, epochtime_t when)
 {
   /* Zero is used to indicate a lack of time. */
   if (when == 0) return;
@@ -120,13 +120,13 @@ void Quota::erase_from_sequence(User &user, epochtime_t when)
   }
 }
 
-void Quota::insert_into_sequence(User &user, epochtime_t when)
+void Quota::insert_into_sequence(const user_t &user, epochtime_t when)
 {
   assert(when != 0);
   ages[when].insert(&user);
 }
 
-void Quota::oldest(User &user, epochtime_t when)
+void Quota::oldest(const user_t &user, epochtime_t when)
 {
   auto pos = users.try_emplace(&user);
   auto &data = pos.first->second;

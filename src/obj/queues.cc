@@ -37,6 +37,7 @@
 #include <filesystem>
 #include <fstream>
 #include <cassert>
+#include <functional>
 
 #include "payloads.hh"
 #include "queues.hh"
@@ -44,8 +45,9 @@
 PayloadQueue::PayloadQueue(std::size_t max_mem, Quota &quota,
                            const std::filesystem::path &dir,
                            user_t user)
-  : dir(dir), max_mem(max_mem), quota(quota), sz_mem(0), user(user),
-    user_ready(false)
+  : dir(dir), max_mem(max_mem), quota(quota),
+    quota_user(std::bind(&PayloadQueue::discard_file, this)),
+    sz_mem(0), user(user), user_ready(false)
 {
   /* Get the list of matching queue files. */
   std::filesystem::create_directory(dir);
@@ -101,6 +103,11 @@ bool PayloadQueue::load_head_file()
   return true;
 }
 
+void PayloadQueue::discard_file()
+{
+  /* Delete the oldest file. */
+  // TODO
+}
 
 void PayloadQueue::attempt_delivery()
 {

@@ -43,7 +43,8 @@
 #include <filesystem>
 #include <fstream>
 
-class Quota;
+#include "quotas.hh"
+
 class Payload;
 
 struct PayloadQueue {
@@ -53,6 +54,7 @@ private:
   const std::filesystem::path dir;
   const std::size_t max_mem;
   Quota &quota;
+  const Quota::user_t quota_user;
 
   std::size_t sz_mem;
 
@@ -76,6 +78,9 @@ private:
   bool user_ready;
 
   void attempt_delivery();
+
+  /* Called by the quota manager to discard a file. */
+  void discard_file();
 
 public:
   PayloadQueue(std::size_t max_mem, Quota &,

@@ -41,20 +41,19 @@
 
 #include <map>
 #include <set>
+#include <functional>
 
 struct Quota {
   typedef std::uintmax_t size_t;
   typedef std::uintmax_t epochtime_t;
-  struct User {
-    virtual void discard() = 0;
-  };
+  typedef std::function<void()> user_t;
 
   Quota();
   void set(size_t);
-  void increase(User &, size_t);
-  void decrease(User &, size_t);
-  void forget(User &);
-  void oldest(User &, epochtime_t);
+  void increase(const user_t &, size_t);
+  void decrease(const user_t &, size_t);
+  void forget(const user_t &);
+  void oldest(const user_t &, epochtime_t);
 
 private:
   size_t total, max;
@@ -64,11 +63,11 @@ private:
     Data() : amount(0), age(0) { }
   };
   void check();
-  std::map<User *, Data> users;
-  std::map<epochtime_t, std::set<User *>> ages;
+  std::map<const user_t *, Data> users;
+  std::map<epochtime_t, std::set<const user_t *>> ages;
 
-  void erase_from_sequence(User &, epochtime_t);
-  void insert_into_sequence(User &, epochtime_t);
+  void erase_from_sequence(const user_t &, epochtime_t);
+  void insert_into_sequence(const user_t &, epochtime_t);
 };
 
 #endif
