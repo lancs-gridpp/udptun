@@ -49,14 +49,29 @@ PayloadQueue::PayloadQueue(std::size_t max_mem, Quota &quota,
     quota_user(std::bind(&PayloadQueue::discard_file, this)),
     sz_mem(0), user(user), user_ready(false)
 {
-  /* Get the list of matching queue files. */
+  /* Get the list of matching queue files, and sum up their sizes. */
   std::filesystem::create_directory(dir);
+  Quota::size_t tsz = 0;
+  index_t oldest_key = 0;
   for (const auto &entry : std::filesystem::directory_iterator(dir)) {
+    /* Match only files with a certain suffix. */
     const auto &fn = entry.path();
     if (fn.extension() != ".queue") continue;
+
+    /* Use the filename stem to determine the sequence number by which
+       the filename is indexed. */
     index_t key = std::stoll(fn.stem(), nullptr, 16);
     queue_fns[key] = fn;
+    if (oldest_key != 0 || key < oldest_key) oldest_key = key;
+
+    /* Accumulate the file size. */
+    auto fsz = std::filesystem::file_size(fn);
+    tsz += fsz;
   }
+
+  /* Report the total to the quota manager. */
+  quota.increase(quota_user, tsz);
+  quota.oldest(quota_user, oldest_key);
 }
 
 PayloadQueue::index_t PayloadQueue::now_index()
@@ -87,19 +102,33 @@ bool PayloadQueue::load1(std::ifstream &fin, std::size_t &sum)
 
 bool PayloadQueue::load_head_file()
 {
+  /* Load at least one non-empty queue file, if available. */
   do {
+    /* Fail if there's no more files to load from. */
     if (queue_fns.empty())
       return false;
+
+    /* Get the earliest filename. */
     auto pos = queue_fns.begin();
     auto &ofn = pos->second;
+
+    /* Read in the contents into the in-memory queue. */
     std::ifstream fin(ofn, std::ios::binary);
-    std::size_t sum = 0;
+    Quota::size_t sum = 0;
     while (load1(fin, sum))
       ;
     fin.close();
+
+    /* Delete the file and its entry, and notify thw quota manager of
+       the reduction in disc usage. */
     std::filesystem::remove(ofn);
     queue_fns.erase(pos);
+    quota.decrease(quota_user, sum);
+
+    /* Keep trying if we still don't have any payloads. */
   } while (queue.empty());
+
+  /* We succeeded in loading at least one payload. */
   return true;
 }
 
@@ -159,14 +188,20 @@ void PayloadQueue::push(const void *base, std::size_t len)
     sz_out = 0;
   }
 
+  /* Append the payload to the latest file.  Keep track of the file
+     size, so we'll know when to start on a new file.  Update the
+     quota manager about the increase in disc usage. */
   Payload::save(out, base, len);
   sz_out += len + 2;
   if (sz_out >= max_mem)
     out.close();
+  quota.increase(quota_user, len + 2);
 }
 
 void PayloadQueue::awaken()
 {
+  /* The user is ready to accept another payload.  Record this
+     condition, and try to provide one. */
   user_ready = true;
   attempt_delivery();
 }
@@ -175,7 +210,9 @@ PayloadQueue::~PayloadQueue()
 {
   if (!queue.empty()) {
     /* Choose a filename prior to existing ones, and save in-memory
-       payloads to it. */
+       payloads to it.  DON'T update the quota manager, as we're about
+       to be destroyed, and we can't do anything about it now
+       anyway. */
     index_t key =
       (queue_fns.empty() ? now_index() : queue_fns.begin()->first) - 1;
     auto nf = make_queue_file(key);
@@ -183,5 +220,16 @@ PayloadQueue::~PayloadQueue()
     out.open(nf, std::ios::binary);
     for (auto &item : queue)
       item.save(out);
+    out.close();
+    queue_fns[key] = nf;
   }
+
+  /* Update the quota manager that our remaining files don't count. */
+  Quota::size_t sum = 0;
+  for (auto &kp : queue_fns)
+    sum += std::filesystem::file_size(kp.second);
+  quota.decrease(quota_user, sum);
+
+  /* Our quota entry should be discarded. */
+  quota.forget(quota_user);
 }
