@@ -129,7 +129,14 @@ void Quota::insert_into_sequence(User &user, epochtime_t when)
 void Quota::oldest(User &user, epochtime_t when)
 {
   auto pos = users.try_emplace(&user);
-  if (pos.first->second.age != when) {
-    erase_from_sequence(user, pos.first->second.age);
+  auto &data = pos.first->second;
+  if (data.age != when) {
+    /* Take the user out of its current position. */
+    erase_from_sequence(user, data.age);
+
+    /* Record its new position. */
+    data.age = when;
+    if (when != 0)
+      insert_into_sequence(user, when);
   }
 }
