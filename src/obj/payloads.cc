@@ -56,8 +56,8 @@ payload_t make_payload(const unsigned char *buf, std::size_t len)
   return std::shared_ptr<std::vector<unsigned char>>(r);
 }
 
-static void save(std::ofstream &out,
-                 const void *base, std::size_t len)
+void Payload::save(std::ofstream &out,
+                   const void *base, std::size_t len)
 {
   unsigned char lenbytes[] = { (unsigned char) (len >> 8), (unsigned char) len };
   out.write(reinterpret_cast<const char *>(lenbytes), sizeof lenbytes);
@@ -66,7 +66,7 @@ static void save(std::ofstream &out,
 
 void Payload::save(std::ofstream &out)
 {
-  ::save(out, base_, len_);
+  save(out, base_, len_);
 }
 
 bool Payload::load(std::ifstream &in)
@@ -132,141 +132,4 @@ void Payload::clear()
     base_ = nullptr;
   }
   len_ = 0;
-}
-
-PayloadQueue::PayloadQueue(std::size_t max_mem,
-                           const std::filesystem::path &dir,
-                           user_t user)
-  : dir(dir), max_mem(max_mem), sz_mem(0), user(user),
-    user_ready(false)
-{
-  /* Get the list of matching queue files. */
-  std::filesystem::create_directory(dir);
-  for (const auto &entry : std::filesystem::directory_iterator(dir)) {
-    const auto &fn = entry.path();
-    if (fn.extension() != ".queue") continue;
-    index_t key = std::stoll(fn.stem(), nullptr, 16);
-    queue_fns[key] = fn;
-  }
-}
-
-PayloadQueue::index_t PayloadQueue::now_index()
-{
-  return std::chrono::duration_cast<std::chrono::nanoseconds>
-    (std::chrono::system_clock::now().time_since_epoch()).count();
-}
-
-std::filesystem::path PayloadQueue::make_queue_file(index_t key)
-{
-  std::stringstream txt;
-  txt << std::hex << key << ".queue";
-  std::filesystem::path nf(dir);
-  nf /= txt.str();
-  return nf;
-}
-
-bool PayloadQueue::load1(std::ifstream &fin)
-{
-  Payload pl;
-  if (pl.load(fin)) {
-    queue.push_back(std::move(pl));
-    return true;
-  } else {
-    return false;
-  }
-}
-
-bool PayloadQueue::load_head_file()
-{
-  do {
-    if (queue_fns.empty())
-      return false;
-    auto pos = queue_fns.begin();
-    auto ofn = pos->second;
-    std::ifstream fin(ofn, std::ios::binary);
-    while (load1(fin))
-      ;
-    fin.close();
-    queue_fns.erase(pos);
-    std::filesystem::remove(ofn);
-  } while (queue.empty());
-  return true;
-}
-
-
-void PayloadQueue::attempt_delivery()
-{
-  assert(user_ready);
-
-  /* Offer items from the in-memory queue until refused. */
-  for ( ; ; ) {
-    /* If the in-memory queue is empty, load and discard one of the
-       files. */
-    if (queue.empty() && !load_head_file())
-      return;
-    assert(!queue.empty());
-
-    auto pos = queue.begin();
-    if (user(std::move(*pos))) {
-      queue.erase(pos);
-      continue;
-    }
-
-    /* The user is not accepting any more payloads for now. */
-    user_ready = false;
-    break;
-  }
-}
-
-void PayloadQueue::push(const void *base, std::size_t len)
-{
-  if (queue_fns.empty() && sz_mem + len < max_mem) {
-    /* Add the entry to memory, and account for it. */
-    bool was_empty = queue.empty();
-    queue.emplace_back(base, len);
-    sz_mem += len;
-
-    /* Let the user know we have a queue entry available. */
-    if (was_empty && user_ready)
-      attempt_delivery();
-    return;
-  }
-
-  if (!out.is_open() || sz_out + (2 + len) >= max_mem) {
-    /* We need a new file.  Determine its time and name. */
-    index_t key = now_index();
-    auto nf = make_queue_file(key);
-    queue_fns[key] = nf;
-
-    /* Open the new file for appending, and reset the current size. */
-    if (out.is_open()) out.close();
-    out.open(nf, std::ios::binary);
-    sz_out = 0;
-  }
-
-  save(out, base, len);
-  sz_out += len + 2;
-  if (sz_out >= max_mem)
-    out.close();
-}
-
-void PayloadQueue::awaken()
-{
-  user_ready = true;
-  attempt_delivery();
-}
-
-PayloadQueue::~PayloadQueue()
-{
-  if (!queue.empty()) {
-    /* Choose a filename prior to existing ones, and save in-memory
-       payloads to it. */
-    index_t key =
-      (queue_fns.empty() ? now_index() : queue_fns.begin()->first) - 1;
-    auto nf = make_queue_file(key);
-    if (out.is_open()) out.close();
-    out.open(nf, std::ios::binary);
-    for (auto &item : queue)
-      item.save(out);
-  }
 }

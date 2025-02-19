@@ -27,6 +27,7 @@ MYABSPATH=$(foreach f,$1,$(if $(patsubst /%,,$f),$(MYCURDIR)$f,$f))
 
 binaries.cc += udptun
 udptun_obj += payloads
+udptun_obj += queues
 udptun_obj += config
 udptun_obj += exits
 udptun_obj += ears

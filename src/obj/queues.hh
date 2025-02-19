@@ -34,46 +34,58 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef exits_included
-#define exits_included
+#ifndef queues_included
+#define queues_included
 
-#include <string>
+#include <map>
+#include <list>
+#include <functional>
 #include <filesystem>
+#include <fstream>
 
-#include <yaml-cpp/yaml.h>
+class Payload;
 
-#include "descriptor.hh"
-#include "timed.hh"
-#include "payloads.hh"
-#include "queues.hh"
+struct PayloadQueue {
+  typedef std::function<bool(Payload &&)> user_t;
 
-struct Exit {
-  virtual void activate() { }
-  virtual void deliver(payload_t) = 0;
-  virtual ~Exit() = default;
-};
+private:
+  const std::filesystem::path dir;
+  const std::size_t max_mem;
 
-class UDPExit : public Exit {
-  int sock;
-  const bool ipv4, ipv6;
-  const std::string host;
-  const std::string srv;
+  std::size_t sz_mem;
 
-  PayloadQueue queue;
+  std::list<Payload> queue;
+  const user_t user;
 
-  Payload payload;
-  bool accept(Payload &&);
+  typedef unsigned long long index_t;
+
+  std::map<index_t, std::filesystem::path> queue_fns;
+  std::size_t sz_out;
+  std::ofstream out;
+
+  static index_t now_index();
+  std::filesystem::path make_queue_file(index_t key);
+  bool load1(std::ifstream &);
+
+  /* Load the entries from the oldest file into the queue, delete the
+     file, and return true; otherwise, return false. */
+  bool load_head_file();
+
+  bool user_ready;
+
+  void attempt_delivery();
 
 public:
-  UDPExit(Scheduler &sched,
-          const std::filesystem::path &dir,
-          const YAML::Node &cfg);
-  void activate();
-  void deliver(payload_t);
-  ~UDPExit();
-};
+  PayloadQueue(std::size_t max_mem,
+               const std::filesystem::path &dir, user_t);
 
-Exit *make_exit(Scheduler &sched,
-                const std::filesystem::path &dir, const YAML::Node &);
+  /* Add another payload to the queue. */
+  void push(const void *, std::size_t);
+
+  /* Acknowledge that the user is ready to receive again. */
+  void awaken();
+
+  ~PayloadQueue();
+};
 
 #endif

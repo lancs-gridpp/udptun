@@ -37,6 +37,8 @@
 #ifndef destruct_included
 #define destruct_included
 
+#include <functional>
+
 class LegacyDestructor {
   const std::function<void()> fn;
 
