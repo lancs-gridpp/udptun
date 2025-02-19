@@ -40,13 +40,16 @@
 
 #include "exits.hh"
 
-Exit *make_exit(Scheduler &sched,
+class Quota;
+
+Exit *make_exit(Scheduler &sched, Quota &quota,
                 const std::filesystem::path &dir, const YAML::Node &cfg)
 {
-  return new UDPExit(sched, dir, cfg);
+  return new UDPExit(sched, quota, dir, cfg);
 }
 
 UDPExit::UDPExit(Scheduler &sched,
+                 Quota &quota,
                  const std::filesystem::path &dir,
                  const YAML::Node &cfg)
   : sock(-1),
@@ -54,7 +57,7 @@ UDPExit::UDPExit(Scheduler &sched,
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>("0")),
-    queue(100 * 1024, dir,
+    queue(100 * 1024, quota, dir,
           std::bind(&UDPExit::accept, this, std::placeholders::_1)) { }
 
 void UDPExit::activate()

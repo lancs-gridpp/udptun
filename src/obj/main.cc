@@ -61,6 +61,7 @@
 #include "scheduling.hh"
 #include "idle.hh"
 #include "timed.hh"
+#include "quotas.hh"
 
 static sig_atomic_t reload = 0, quit = 0;
 
@@ -149,6 +150,7 @@ int main(int argc, const char *const *argv)
   Scheduler sched;
   sched.signal_mask(poll_sigs);
 
+  Quota quota;
 
   bool more;
   IdleEvent idle(sched, [&more]() { more = false; });
@@ -166,6 +168,9 @@ int main(int argc, const char *const *argv)
     if (root["state"] && root["state"]["queues"])
       queuedir = root["state"]["queues"].as<std::string>();
 
+    /* Set the quota from configuration. */
+    // TODO
+
     std::filesystem::path exit_queuedir = queuedir / "exits";
     std::filesystem::path tunnel_queuedir = queuedir / "tunnels";
 
@@ -176,9 +181,9 @@ int main(int argc, const char *const *argv)
     {
       std::map<std::string, std::shared_ptr<Exit>> exits;
       populate<Exit>(exits, "exits", root,
-                     [&sched, &exit_queuedir](const std::string &inst,
-                                              const YAML::Node &cfg) {
-                       return make_exit(sched, exit_queuedir / inst, cfg);
+                     [&sched, &quota, &exit_queuedir](const std::string &inst,
+                                                      const YAML::Node &cfg) {
+                       return make_exit(sched, quota, exit_queuedir / inst, cfg);
                      });
       populate<Ear>(ears, "ears", root,
                     std::bind(&make_ear, sched, exits, std::placeholders::_2));

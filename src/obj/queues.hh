@@ -43,6 +43,7 @@
 #include <filesystem>
 #include <fstream>
 
+class Quota;
 class Payload;
 
 struct PayloadQueue {
@@ -51,6 +52,7 @@ struct PayloadQueue {
 private:
   const std::filesystem::path dir;
   const std::size_t max_mem;
+  Quota &quota;
 
   std::size_t sz_mem;
 
@@ -76,7 +78,7 @@ private:
   void attempt_delivery();
 
 public:
-  PayloadQueue(std::size_t max_mem,
+  PayloadQueue(std::size_t max_mem, Quota &,
                const std::filesystem::path &dir, user_t);
 
   /* Add another payload to the queue. */

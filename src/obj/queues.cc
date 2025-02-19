@@ -41,10 +41,10 @@
 #include "payloads.hh"
 #include "queues.hh"
 
-PayloadQueue::PayloadQueue(std::size_t max_mem,
+PayloadQueue::PayloadQueue(std::size_t max_mem, Quota &quota,
                            const std::filesystem::path &dir,
                            user_t user)
-  : dir(dir), max_mem(max_mem), sz_mem(0), user(user),
+  : dir(dir), max_mem(max_mem), quota(quota), sz_mem(0), user(user),
     user_ready(false)
 {
   /* Get the list of matching queue files. */

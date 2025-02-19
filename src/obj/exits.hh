@@ -47,6 +47,8 @@
 #include "payloads.hh"
 #include "queues.hh"
 
+class Quota;
+
 struct Exit {
   virtual void activate() { }
   virtual void deliver(payload_t) = 0;
@@ -66,6 +68,7 @@ class UDPExit : public Exit {
 
 public:
   UDPExit(Scheduler &sched,
+          Quota &quota,
           const std::filesystem::path &dir,
           const YAML::Node &cfg);
   void activate();
@@ -73,7 +76,7 @@ public:
   ~UDPExit();
 };
 
-Exit *make_exit(Scheduler &sched,
+Exit *make_exit(Scheduler &sched, Quota &,
                 const std::filesystem::path &dir, const YAML::Node &);
 
 #endif
