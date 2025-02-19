@@ -232,7 +232,7 @@ void PayloadQueue::push(const void *base, std::size_t len)
     return;
   }
 
-  if (!out.is_open() || sz_out + len >= max_mem) {
+  if (!out.is_open() || sz_out + (2 + len) >= max_mem) {
     /* We need a new file.  Determine its time and name. */
     index_t key = now_index();
     auto nf = make_queue_file(key);
@@ -245,7 +245,7 @@ void PayloadQueue::push(const void *base, std::size_t len)
   }
 
   save(out, base, len);
-  sz_out += len;
+  sz_out += len + 2;
   if (sz_out >= max_mem)
     out.close();
 }
