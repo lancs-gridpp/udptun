@@ -69,7 +69,7 @@ void Payload::save(std::ofstream &out)
   save(out, base_, len_);
 }
 
-bool Payload::load(std::ifstream &in)
+bool Payload::load(std::ifstream &in, std::size_t &sum)
 {
   unsigned char lenbytes[2];
   in.read(reinterpret_cast<char *>(lenbytes), sizeof lenbytes);
@@ -81,6 +81,7 @@ bool Payload::load(std::ifstream &in)
     in.read(reinterpret_cast<char *>(base), len);
     if (in.fail())
       return false;
+    sum += 2 + len;
     clear();
     base_ = base, base = nullptr;
     len_ = len;

@@ -72,10 +72,10 @@ std::filesystem::path PayloadQueue::make_queue_file(index_t key)
   return nf;
 }
 
-bool PayloadQueue::load1(std::ifstream &fin)
+bool PayloadQueue::load1(std::ifstream &fin, std::size_t &sum)
 {
   Payload pl;
-  if (pl.load(fin)) {
+  if (pl.load(fin, sum)) {
     queue.push_back(std::move(pl));
     return true;
   } else {
@@ -91,7 +91,8 @@ bool PayloadQueue::load_head_file()
     auto pos = queue_fns.begin();
     auto &ofn = pos->second;
     std::ifstream fin(ofn, std::ios::binary);
-    while (load1(fin))
+    std::size_t sum = 0;
+    while (load1(fin, sum))
       ;
     fin.close();
     std::filesystem::remove(ofn);

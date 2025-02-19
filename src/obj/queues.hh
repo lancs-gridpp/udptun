@@ -67,7 +67,7 @@ private:
 
   static index_t now_index();
   std::filesystem::path make_queue_file(index_t key);
-  bool load1(std::ifstream &);
+  bool load1(std::ifstream &, std::size_t &sum);
 
   /* Load the entries from the oldest file into the queue, delete the
      file, and return true; otherwise, return false. */

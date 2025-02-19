@@ -66,7 +66,7 @@ public:
   Payload(Payload &&);
   Payload &operator =(Payload &&);
   void save(std::ofstream &out);
-  bool load(std::ifstream &in);
+  bool load(std::ifstream &in, std::size_t &sum);
 
   /* Check for contents. */
   operator bool() { return base_; }
