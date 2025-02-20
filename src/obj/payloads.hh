@@ -37,15 +37,6 @@
 #ifndef payloads_included
 #define payloads_included
 
-// BEGIN DEPRECATED
-#include <vector>
-#include <memory>
-
-typedef std::shared_ptr<std::vector<unsigned char>> payload_t;
-
-payload_t make_payload(const unsigned char *, std::size_t len);
-// END DEPRECATED
-
 #include <fstream>
 
 struct iovec;

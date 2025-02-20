@@ -49,13 +49,6 @@
 #include "payloads.hh"
 #include "destruction.hh"
 
-payload_t make_payload(const unsigned char *buf, std::size_t len)
-{
-  auto r = new std::vector<unsigned char>(len);
-  memcpy(r->data(), buf, len);
-  return std::shared_ptr<std::vector<unsigned char>>(r);
-}
-
 void Payload::save(std::ofstream &out,
                    const void *base, std::size_t len)
 {

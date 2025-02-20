@@ -51,7 +51,7 @@ class Quota;
 
 struct Exit {
   virtual void activate() { }
-  virtual void deliver(payload_t) = 0;
+  virtual void deliver(const void *, std::size_t) = 0;
   virtual ~Exit() = default;
 };
 
@@ -72,7 +72,7 @@ public:
           const std::filesystem::path &dir,
           const YAML::Node &cfg);
   void activate();
-  void deliver(payload_t);
+  void deliver(const void *, std::size_t);
   ~UDPExit();
 };
 

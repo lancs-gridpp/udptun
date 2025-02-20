@@ -72,7 +72,7 @@ bool UDPExit::accept(Payload &&pl)
   // TODO
 }
 
-void UDPExit::deliver(payload_t)
+void UDPExit::deliver(const void *base, std::size_t len)
 {
   // TODO
 }

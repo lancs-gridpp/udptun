@@ -130,7 +130,6 @@ bool TCPEar::Connection::process()
   if (len < 6 + expected) return false;
 
   /* Deliver the payload to any indicated exit. */
-  auto pl = make_payload(buf + 6, expected - 6);
   for (unsigned lbl = 0; lbl < 32; lbl++) {
     /* Is the label present in the set? */
     if ((buf[lbl / 8] & (1ul << (lbl % 8))) == 0)
@@ -141,7 +140,7 @@ bool TCPEar::Connection::process()
     if (pos == parent.exits.end())
       continue;
 
-    pos->second->deliver(pl);
+    pos->second->deliver(buf + 5, expected - 6);
   }
 
   /* Consume the header and payload. */
