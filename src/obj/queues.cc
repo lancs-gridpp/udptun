@@ -135,7 +135,13 @@ bool PayloadQueue::load_head_file()
 void PayloadQueue::discard_file()
 {
   /* Delete the oldest file. */
-  // TODO
+  auto pos = queue_fns.begin();
+  if (pos == queue_fns.end()) return;
+  auto ofn = pos->second;
+  auto sz = std::filesystem::file_size(ofn);
+  std::filesystem::remove(ofn);
+  queue_fns.erase(pos);
+  quota.decrease(quota_user, sz);
 }
 
 void PayloadQueue::attempt_delivery()
