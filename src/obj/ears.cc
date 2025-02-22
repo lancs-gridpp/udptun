@@ -74,6 +74,7 @@ void TCPEar::Listener::handle_fd(uint32_t)
 	continue;
 
       default:
+        fdev.cancel();
 	close(sock);
 	sock = -1;
 	// TODO: Maybe throw something, or at least log.
