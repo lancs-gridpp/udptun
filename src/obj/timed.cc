@@ -76,7 +76,7 @@ void Scheduler::set(TimedEvent *mom)
 {
   if (!mom->when)
     throw std::invalid_argument(sformat("bad unit time %s",
-					std::string(mom->when).c_str()));
+                                        std::string(mom->when).c_str()));
   //std::cerr << "setting entry at " << std::string(mom->when) << std::endl;
   table[mom->when].insert(mom);
 }

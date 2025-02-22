@@ -71,14 +71,14 @@ void TCPEar::Listener::handle_fd(uint32_t)
       case EOPNOTSUPP:
       case ENETUNREACH:
       case EAGAIN:
-	continue;
+        continue;
 
       default:
         fdev.cancel();
-	close(sock);
-	sock = -1;
-	// TODO: Maybe throw something, or at least log.
-	return;
+        close(sock);
+        sock = -1;
+        // TODO: Maybe throw something, or at least log.
+        return;
       }
     }
 
@@ -93,7 +93,7 @@ void TCPEar::Listener::handle_fd(uint32_t)
 TCPEar::Listener::Listener(TCPEar &parent, int sock)
   : parent(parent), sock(sock),
     fdev(parent.sched,
-	 std::bind(&Listener::handle_fd, this, std::placeholders::_1)) { }
+         std::bind(&Listener::handle_fd, this, std::placeholders::_1)) { }
 
 TCPEar::Listener::~Listener()
 {
@@ -106,7 +106,7 @@ TCPEar::Listener::~Listener()
 TCPEar::Connection::Connection(TCPEar &parent, int sock)
   : parent(parent), sock(sock), len(0),
     fdev(parent.sched,
-	 std::bind(&Connection::handle_fd, this, std::placeholders::_1))
+         std::bind(&Connection::handle_fd, this, std::placeholders::_1))
 {
   /* Get ready to receive immediately. */
   fdev.set(sock, EPOLLIN);
@@ -206,19 +206,19 @@ void TCPEar::activate()
   struct addrinfo *info = nullptr;
   LegacyDestructor infoDestr([&info]() { if (info) freeaddrinfo(info); });
   int rc = getaddrinfo(host.c_str(),
-		       srv.empty() ? nullptr : srv.c_str(),
-		       &hints, &info);
+                       srv.empty() ? nullptr : srv.c_str(),
+                       &hints, &info);
   if (rc < 0)
     throw std::system_error(errno, std::system_category(),
-			    sformat("getaddrinfo(%s)", host.c_str()));
+                            sformat("getaddrinfo(%s)", host.c_str()));
 
   for (auto iter = info; iter; iter = iter->ai_next) {
     int sock = socket(iter->ai_family, SOCK_STREAM, iter->ai_protocol);
     if (sock < 0)
       throw std::system_error(errno, std::system_category(),
-			      sformat("socket(%d, SOCK_STREAM, %d)",
-				      iter->ai_family,
-				      iter->ai_protocol));
+                              sformat("socket(%d, SOCK_STREAM, %d)",
+                                      iter->ai_family,
+                                      iter->ai_protocol));
 
     if (bind(sock, iter->ai_addr, iter->ai_addrlen) != 0) {
       int ec = errno;
@@ -248,13 +248,13 @@ Ear *make_ear(Scheduler &sched,
     if (cfg["channel"]) {
       auto end = cfg["channel"].end();
       for (auto iter = cfg["channel"].begin(); iter != end; iter++) {
-	auto label = (*iter)["label"].as<unsigned>();
-	auto name = (*iter)["exit"].as<std::string>();
-	auto pos = refs.find(name);
-	if (pos == refs.end()) {
-	  // TODO: Throw something.
-	}
-	result->channel(label, pos->second);
+        auto label = (*iter)["label"].as<unsigned>();
+        auto name = (*iter)["exit"].as<std::string>();
+        auto pos = refs.find(name);
+        if (pos == refs.end()) {
+          // TODO: Throw something.
+        }
+        result->channel(label, pos->second);
       }
     }
   }
