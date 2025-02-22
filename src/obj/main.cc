@@ -56,6 +56,7 @@
 #include "realtime.hh"
 #include "tunnels.hh"
 #include "ears.hh"
+#include "destinations.hh"
 #include "exits.hh"
 #include "idle.hh"
 #include "scheduling.hh"
@@ -179,6 +180,12 @@ int main(int argc, const char *const *argv)
 
     std::map<std::string, std::shared_ptr<Ear>> ears;
     {
+      std::map<std::string, std::shared_ptr<Destination>> destinations;
+      populate<Destination>(destinations, "destinations", root,
+                            [](const std::string &inst,
+                               const YAML::Node &cfg) {
+                              return new Destination(cfg);
+                            });
       std::map<std::string, std::shared_ptr<Exit>> exits;
       populate<Exit>(exits, "exits", root,
                      [&sched, &quota, &exit_queuedir](const std::string &inst,
