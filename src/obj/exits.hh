@@ -39,44 +39,45 @@
 
 #include <string>
 #include <filesystem>
+#include <memory>
+#include <map>
+#include <vector>
 
 #include <yaml-cpp/yaml.h>
 
-#include "descriptor.hh"
 #include "timed.hh"
+#include "idle.hh"
 #include "payloads.hh"
 #include "queues.hh"
 
+class Egress;
 class Quota;
+class Destination;
 
-struct Exit {
-  virtual void activate() { }
-  virtual void deliver(const void *, std::size_t) = 0;
-  virtual ~Exit() = default;
-};
-
-class UDPExit : public Exit {
-  int sock;
-  const bool ipv4, ipv6;
-  const std::string host;
-  const std::string srv;
-
+class Exit {
   PayloadQueue queue;
 
-  Payload payload;
   bool accept(Payload &&);
+  IdleEvent downstream_event;
+  void downstream_ready();
+  bool okay;
+
+  std::shared_ptr<Egress> egress;
+  std::shared_ptr<Destination> destination;
 
 public:
-  UDPExit(Scheduler &sched,
-          Quota &quota,
-          const std::filesystem::path &dir,
-          const YAML::Node &cfg);
+  Exit(Scheduler &sched,
+       Quota &quota,
+       const std::filesystem::path &dir,
+       std::shared_ptr<Egress>,
+       std::shared_ptr<Destination>);
   void activate();
   void deliver(const void *, std::size_t);
-  ~UDPExit();
 };
 
-Exit *make_exit(Scheduler &sched, Quota &,
-                const std::filesystem::path &dir, const YAML::Node &);
+void make_exits(Scheduler &sched, Quota &,
+                const std::filesystem::path &dir, const YAML::Node &,
+                std::function<std::shared_ptr<Destination>(const std::string &)> dests,
+                std::map<std::string, std::shared_ptr<Exit>> &);
 
 #endif

@@ -187,13 +187,15 @@ int main(int argc, const char *const *argv)
                               return new Destination(cfg);
                             });
       std::map<std::string, std::shared_ptr<Exit>> exits;
-      populate<Exit>(exits, "exits", root,
-                     [&sched, &quota, &exit_queuedir](const std::string &inst,
-                                                      const YAML::Node &cfg) {
-                       return make_exit(sched, quota, exit_queuedir / inst, cfg);
-                     });
+      // populate<Exit>(exits, "exits", root,
+      //                [&sched, &quota, &exit_queuedir](const std::string &inst,
+      //                                                 const YAML::Node &cfg) {
+      //                  return make_exit(sched, quota, exit_queuedir / inst, cfg);
+      //                });
       populate<Ear>(ears, "ears", root,
-                    std::bind(&make_ear, sched, exits, std::placeholders::_2));
+                    std::bind(&make_ear, sched,
+                              std::placeholders::_1,
+                              exits, std::placeholders::_2));
     }
 
     more = true;

@@ -34,80 +34,36 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ears_included
-#define ears_included
+#ifndef egress_included
+#define egress_included
 
-#include <string>
-#include <map>
-#include <memory>
-#include <vector>
-#include <list>
+#include <cstdint>
+#include <functional>
 #include <set>
 
 #include <yaml-cpp/yaml.h>
 
 #include "descriptor.hh"
-#include "timed.hh"
 #include "idle.hh"
+#include "destinations.hh"
 
-class Exit;
-
-struct Ear {
-  virtual void activate() { };
-  virtual void channel(unsigned, std::shared_ptr<Exit> dst) = 0;
-  virtual ~Ear() = default;
-};
-
-class TCPEar : public Ear {
-  class Listener {
-    friend TCPEar;
-    TCPEar &parent;
-    int sock;
-    void handle_fd(uint32_t);
-    DescriptorEvent fdev;
-
-  public:
-    Listener(TCPEar &, int sock);
-    ~Listener();
-  };
-  friend class Listener;
-  std::list<Listener> listeners;
-
-  class Connection {
-    friend TCPEar;
-    TCPEar &parent;
-    int sock;
-    void handle_fd(uint32_t);
-    unsigned char buf[4 + 2 + 65507];
-    std::size_t len;
-    DescriptorEvent fdev;
-
-    bool process();
-
-  public:
-    Connection(TCPEar &, int sock);
-    ~Connection();
-  };
-  friend class Connection;
-  std::list<Connection> conns;
-
-  Scheduler &sched;
-  IdleEvent idev;
+class Egress {
   const bool ipv4, ipv6;
   const std::string host, srv;
-  std::map<unsigned, std::set<std::shared_ptr<Exit>>> exits;
+  int sock, family, protocol;
+  bool ready;
+  DescriptorEvent fdev;
 
-  void flush();
+  std::set<IdleEvent *> users;
+
+  void handle_fd(uint32_t);
 
 public:
-  TCPEar(Scheduler &sched, const YAML::Node &cfg);
+  Egress(Scheduler &sched, const YAML::Node &);
   void activate();
-  void channel(unsigned, std::shared_ptr<Exit> dst);
+  int send(const void *buf, size_t len, Destination &, int flags);
+  void notify(IdleEvent &user) { users.insert(&user); }
+  ~Egress();
 };
-
-Ear *make_ear(Scheduler &,
-              const std::string &ear_name,
-              const std::map<std::string, std::shared_ptr<Exit>> &refs,
-              const YAML::Node &);
 
 #endif

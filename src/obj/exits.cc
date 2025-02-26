@@ -37,48 +37,74 @@
 #include <unistd.h>
 
 #include <functional>
+#include <stdexcept>
 
 #include "exits.hh"
+#include "egress.hh"
+#include "formatting.hh"
 
-class Quota;
-
-Exit *make_exit(Scheduler &sched, Quota &quota,
-                const std::filesystem::path &dir, const YAML::Node &cfg)
+void make_exits(Scheduler &sched, Quota &quota,
+                const std::filesystem::path &dir, const YAML::Node &cfg,
+                std::function<std::shared_ptr<Destination>(const std::string &)> dests,
+                std::map<std::string, std::shared_ptr<Exit>> &out)
 {
-  return new UDPExit(sched, quota, dir, cfg);
+  auto egress = std::make_shared<Egress>(sched, cfg["udp"]);
+  const auto end = cfg["names"].end();
+  for (auto iter = cfg["names"].begin(); iter != end; iter++) {
+    auto name = iter->first.as<std::string>();
+    auto dest_name = iter->second.as<std::string>();
+    auto dest = dests(dest_name);
+    if (!dest)
+      throw std::runtime_error(sformat("unknown destination %s for exit %s",
+                                       dest_name.c_str(), name.c_str()));
+    out[name] = std::make_shared<Exit>(sched, quota, dir / name, egress, dest);
+  }
 }
 
-UDPExit::UDPExit(Scheduler &sched,
-                 Quota &quota,
-                 const std::filesystem::path &dir,
-                 const YAML::Node &cfg)
-  : sock(-1),
-    ipv4(cfg["ipv4"].as<bool>("true")),
-    ipv6(cfg["ipv6"].as<bool>("true")),
-    host(cfg["host"].as<std::string>("localhost")),
-    srv(cfg["port"].as<std::string>("0")),
-    queue(100 * 1024, quota, dir,
-          std::bind(&UDPExit::accept, this, std::placeholders::_1)) { }
+Exit::Exit(Scheduler &sched,
+           Quota &quota,
+           const std::filesystem::path &dir,
+           std::shared_ptr<Egress> egress,
+           std::shared_ptr<Destination> dest)
+  : queue(100 * 1024, quota, dir,
+          std::bind(&Exit::accept, this, std::placeholders::_1)),
+    downstream_event(sched, std::bind(&Exit::downstream_ready, this)),
+    okay(false), egress(egress), destination(dest) { }
 
-void UDPExit::activate()
+void Exit::activate()
 {
-  /* Resolve the host, and create a datagram socket. */
-  // TODO
+  egress->activate();
 }
 
-bool UDPExit::accept(Payload &&pl)
+bool Exit::accept(Payload &&pl)
 {
-  if (payload) return false;
-  // TODO
+  /* If we're not ready to send, ensure that we will be notified when
+     ready, and indicate that we have not consumed the payload. */
+  if (!okay) {
+    egress->notify(downstream_event);
+    return false;
+  }
+
+  /* Try to send the payload. */
+  auto rc = egress->send(pl.base(), pl.size(), *destination.get(), 0);
+  if (rc == EWOULDBLOCK) {
+    okay = false;
+    egress->notify(downstream_event);
+    return false;
+  }
+
+  /* Consume the payload. */
+  pl.clear();
+  return true;
 }
 
-void UDPExit::deliver(const void *base, std::size_t len)
+void Exit::deliver(const void *base, std::size_t len)
 {
-  // TODO
+  queue.push(base, len);
 }
 
-UDPExit::~UDPExit()
+void Exit::downstream_ready()
 {
-  if (sock >= 0)
-    close(sock);
+  okay = true;
+  queue.awaken();
 }

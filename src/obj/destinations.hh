@@ -65,9 +65,10 @@ public:
 
   /* Match the address family and protocol of the given socket to a
      resolved socket address, and send the data.  Return ENOSYS if
-     there is no matching family and protocol. */
-  ssize_t send(int family, int protocol,
-               int sockfd, const void *buf, size_t len, int flags);
+     there is no matching family and protocol.  Returns 0 on
+     success. */
+  int send(int family, int protocol,
+           int sockfd, const void *buf, size_t len, int flags);
 };
 
 #endif

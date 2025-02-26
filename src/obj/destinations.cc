@@ -37,6 +37,7 @@
 #include <netdb.h>
 
 #include <cstring>
+#include <cerrno>
 
 #include <string>
 #include <system_error>
@@ -77,13 +78,15 @@ Destination::Destination(const YAML::Node &cfg)
   }
 }
 
-ssize_t Destination::send(int family, int protocol,
+int Destination::send(int family, int protocol,
                           int sockfd, const void *buf, size_t len, int flags)
 {
   Key key(family, protocol);
   auto pos = options.find(key);
   if (pos == options.end())
     return ENOSYS;
-  return ::sendto(sockfd, buf, len, flags,
-                  &pos->second.addr, pos->second.addrlen);
+  int rc = ::sendto(sockfd, buf, len, flags,
+                    &pos->second.addr, pos->second.addrlen);
+  if (rc == 0) return 0;
+  return errno;
 }

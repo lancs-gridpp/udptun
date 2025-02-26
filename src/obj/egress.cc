@@ -1,0 +1,159 @@
+// -*- c-basic-offset: 2; indent-tabs-mode: nil -*-
+
+/*
+ * Copyright (c) 2025, Lancaster University
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above
+ *    copyright notice, this list of conditions and the following
+ *    disclaimer in the documentation and/or other materials provided
+ *    with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+
+#include <cassert>
+#include <cerrno>
+#include <cstring>
+
+#include <list>
+#include <string>
+#include <sstream>
+#include <algorithm>
+#include <functional>
+
+#include "destruction.hh"
+#include "formatting.hh"
+#include "egress.hh"
+
+void Egress::handle_fd(uint32_t events)
+{
+  ready = true;
+
+  /* Prime each user to be able to send. */
+  for (auto &ptr : users)
+    ptr->set();
+  users.clear();
+}
+
+Egress::Egress(Scheduler &sched, const YAML::Node &cfg)
+  : ipv4(cfg["ipv4"].as<bool>("true")),
+    ipv6(cfg["ipv6"].as<bool>("true")),
+    host(cfg["host"].as<std::string>("localhost")),
+    srv(cfg["port"].as<std::string>()), sock(-1), ready(false),
+    fdev(sched, std::bind(&Egress::handle_fd, this, std::placeholders::_1)) { }
+
+void Egress::activate()
+{
+  if (sock >= 0) return;
+  /* Restrict what we're looking for. */
+  struct addrinfo hints;
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = ipv4 ? ipv6 ? AF_UNSPEC : AF_INET : AF_INET6;
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_protocol = 0;
+
+  /* Resolve the host. */
+  struct addrinfo *info = nullptr;
+  LegacyDestructor infoDestr([&info]() { if (info) freeaddrinfo(info); });
+  int rc = getaddrinfo(host.c_str(),
+                       srv.empty() ? nullptr : srv.c_str(),
+                       &hints, &info);
+  if (rc < 0)
+    throw std::system_error(errno, std::system_category(),
+                            sformat("getaddrinfo(%s)", host.c_str()));
+
+  /* Try to make a socket out of each offered entry, until one works.
+     Store up the errors of the others, but only throw an exception if
+     all fail. */
+  std::map<struct addrinfo *, std::pair<const char *, int>> bad;
+  for (auto iter = info; iter; iter = iter->ai_next) {
+    int sock = socket(iter->ai_family, SOCK_DGRAM, iter->ai_protocol);
+    if (sock < 0) {
+      bad.try_emplace(iter, "socket", errno);
+      continue;
+    }
+
+    if (bind(sock, iter->ai_addr, iter->ai_addrlen) != 0) {
+      bad.try_emplace(iter, "bind", errno);
+      continue;
+    }
+
+    this->sock = sock;
+    this->family = iter->ai_family;
+    this->protocol = iter->ai_protocol;
+    return;
+  }
+
+  /* We failed to create a socket, so gather the error messages
+     together. */
+  std::stringstream msg;
+  msg << "bad egress socket";
+  for (auto ent : bad) {
+    auto sai = ent.first;
+    auto &prb = ent.second;
+    msg << " [" << sai->ai_family << ", " << sai->ai_protocol << ", "
+        << prb.first << ": " << ::strerror(prb.second) << "]";
+  }
+  throw std::runtime_error(msg.str());
+}
+
+int Egress::send(const void *buf, size_t len, Destination &dst, int flags)
+{
+  if (!ready) {
+    /* Tell the caller that we can't send now, but try again later. */
+    return EWOULDBLOCK;
+  }
+
+  assert(sock >= 0);
+  auto rc = dst.send(family, protocol, sock, buf, len, flags);
+
+  /* If we got connection refused, it's from an earlier message, so
+     just try sending again. */
+  if (rc < 0 && errno == ECONNREFUSED)
+    rc = dst.send(family, protocol, sock, buf, len, flags);
+
+  ready = false;
+  return 0;
+}
+
+Egress::~Egress()
+{
+  /* Cancel users invoking us, although this set should be empty by
+     now. */
+  for (auto &ptr : users)
+    ptr->cancel();
+
+  /* Make sure we receive no more descriptor events, before closing
+     the socket. */
+  fdev.cancel();
+  if (sock >= 0)
+    close(sock);
+}

@@ -43,6 +43,7 @@
 #include <cerrno>
 #include <cstring>
 #include <system_error>
+#include <stdexcept>
 
 #include <functional>
 
@@ -141,7 +142,8 @@ bool TCPEar::Connection::process()
     if (pos == parent.exits.end())
       continue;
 
-    pos->second->deliver(buf + 5, expected - 6);
+    for (auto ex : pos->second)
+      ex->deliver(buf + 5, expected - 6);
   }
 
   /* Consume the header and payload. */
@@ -190,7 +192,7 @@ void TCPEar::flush()
 
 void TCPEar::channel(unsigned label, std::shared_ptr<Exit> dst)
 {
-  exits[label] = dst;
+  exits[label].insert(dst);
 }
 
 void TCPEar::activate()
@@ -237,6 +239,7 @@ void TCPEar::activate()
 }
 
 Ear *make_ear(Scheduler &sched,
+              const std::string &ear_name,
               const std::map<std::string, std::shared_ptr<Exit>> &refs,
               const YAML::Node &cfg)
 {
@@ -249,12 +252,17 @@ Ear *make_ear(Scheduler &sched,
       auto end = cfg["channel"].end();
       for (auto iter = cfg["channel"].begin(); iter != end; iter++) {
         auto label = (*iter)["label"].as<unsigned>();
-        auto name = (*iter)["exit"].as<std::string>();
-        auto pos = refs.find(name);
-        if (pos == refs.end()) {
-          // TODO: Throw something.
+        auto cend = (*iter)["exits"].end();
+        for (auto citer = (*iter)["exits"].begin(); citer != end; citer++) {
+          auto name = citer->as<std::string>();
+          auto pos = refs.find(name);
+          if (pos == refs.end()) {
+            delete result;
+            throw std::runtime_error(sformat("unknown exit %s for ear %s",
+                                             name.c_str(), ear_name.c_str()));
+          }
+          result->channel(label, pos->second);
         }
-        result->channel(label, pos->second);
       }
     }
   }
