@@ -34,8 +34,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef tunnels_included
-#define tunnels_included
+#ifndef ingress_included
+#define ingress_included
 
 #include <string>
 
@@ -43,12 +43,12 @@
 #include "timed.hh"
 #include "labels.hh"
 
-struct Tunnel {
+struct Ingress {
   virtual void open() = 0;
   virtual void submit(labelset_t, const void *data, std::size_t len) = 0;
 };
 
-class TCPTunnel : public Tunnel {
+class TCPIngress : public Ingress {
   const std::string host;
   const unsigned port;
 
@@ -56,8 +56,8 @@ class TCPTunnel : public Tunnel {
   void descriptor_event(uint32_t);
 
 public:
-  TCPTunnel(Scheduler &sched, const std::string &host, unsigned port);
-  ~TCPTunnel();
+  TCPIngress(Scheduler &sched, const std::string &host, unsigned port);
+  ~TCPIngress();
   void open();
   void submit(labelset_t, const void *data, std::size_t len);
 };

@@ -36,26 +36,26 @@
 
 #include <functional>
 
-#include "tunnels.hh"
+#include "ingress.hh"
 
-TCPTunnel::TCPTunnel(Scheduler &sched, const std::string &host, unsigned port)
+TCPIngress::TCPIngress(Scheduler &sched, const std::string &host, unsigned port)
   : host(host), port(port),
     fdev(sched, [this](uint32_t evs) { descriptor_event(evs); })
 {
-  //epeh = std::bind(&TCPTunnel::handle_event, this, std::placeholders::_1);
+  //epeh = std::bind(&TCPIngress::handle_event, this, std::placeholders::_1);
 }
 
-void TCPTunnel::descriptor_event(uint32_t)
+void TCPIngress::descriptor_event(uint32_t)
 {
   // TODO
 }
 
-void TCPTunnel::open()
+void TCPIngress::open()
 {
   // TODO
 }
 
-void TCPTunnel::submit(labelset_t, const void *data, std::size_t len)
+void TCPIngress::submit(labelset_t, const void *data, std::size_t len)
 {
   // TODO
 }

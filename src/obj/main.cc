@@ -54,7 +54,7 @@
 #include "config.hh"
 #include "periods.hh"
 #include "realtime.hh"
-#include "tunnels.hh"
+#include "ingress.hh"
 #include "egress.hh"
 #include "destinations.hh"
 #include "exits.hh"
@@ -175,7 +175,7 @@ int main(int argc, const char *const *argv)
     std::filesystem::path egress_qdir = queuedir / "egress";
     std::filesystem::path ingress_qdir = queuedir / "ingress";
 
-    //std::map<std::string, std::unique_ptr<Tunnel>> tunnels;
+    //std::map<std::string, std::unique_ptr<Ingress>> ingress;
 
 
     std::map<std::string, std::shared_ptr<Egress>> egress_index;
