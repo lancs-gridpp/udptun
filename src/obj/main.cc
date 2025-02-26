@@ -55,7 +55,7 @@
 #include "periods.hh"
 #include "realtime.hh"
 #include "tunnels.hh"
-#include "ears.hh"
+#include "egress.hh"
 #include "destinations.hh"
 #include "exits.hh"
 #include "idle.hh"
@@ -178,7 +178,7 @@ int main(int argc, const char *const *argv)
     //std::map<std::string, std::unique_ptr<Tunnel>> tunnels;
 
 
-    std::map<std::string, std::shared_ptr<Ear>> ears;
+    std::map<std::string, std::shared_ptr<Egress>> egress_index;
     {
       std::map<std::string, std::shared_ptr<Destination>> destinations;
       populate<Destination>(destinations, "destinations", root,
@@ -200,10 +200,10 @@ int main(int argc, const char *const *argv)
                      exits);
         }
       }
-      populate<Ear>(ears, "ears", root,
-                    std::bind(&make_ear, sched,
-                              std::placeholders::_1,
-                              exits, std::placeholders::_2));
+      populate<Egress>(egress_index, "egress", root,
+                       std::bind(&make_egress, sched,
+                                 std::placeholders::_1,
+                                 exits, std::placeholders::_2));
     }
 
     more = true;

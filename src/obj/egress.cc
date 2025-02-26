@@ -47,13 +47,13 @@
 
 #include <functional>
 
-#include "ears.hh"
+#include "egress.hh"
 #include "formatting.hh"
 #include "destruction.hh"
 #include "labels.hh"
 #include "exits.hh"
 
-void TCPEar::Listener::handle_fd(uint32_t)
+void TCPEgress::Listener::handle_fd(uint32_t)
 {
   /* A connection has been requested.  Accept it to get the file
      descriptor, and make a Connection object out of it. */
@@ -91,12 +91,12 @@ void TCPEar::Listener::handle_fd(uint32_t)
   } while (true);
 }
 
-TCPEar::Listener::Listener(TCPEar &parent, int sock)
+TCPEgress::Listener::Listener(TCPEgress &parent, int sock)
   : parent(parent), sock(sock),
     fdev(parent.sched,
          std::bind(&Listener::handle_fd, this, std::placeholders::_1)) { }
 
-TCPEar::Listener::~Listener()
+TCPEgress::Listener::~Listener()
 {
   /* Cancel any outstanding expectation before closing the socket. */
   fdev.cancel();
@@ -104,7 +104,7 @@ TCPEar::Listener::~Listener()
     close(sock);
 }
 
-TCPEar::Connection::Connection(TCPEar &parent, int sock)
+TCPEgress::Connection::Connection(TCPEgress &parent, int sock)
   : parent(parent), sock(sock), len(0),
     fdev(parent.sched,
          std::bind(&Connection::handle_fd, this, std::placeholders::_1))
@@ -113,7 +113,7 @@ TCPEar::Connection::Connection(TCPEar &parent, int sock)
   fdev.set(sock, EPOLLIN);
 }
 
-TCPEar::Connection::~Connection()
+TCPEgress::Connection::~Connection()
 {
   /* Cancel any outstanding expectation before closing the socket. */
   fdev.cancel();
@@ -121,7 +121,7 @@ TCPEar::Connection::~Connection()
     close(sock);
 }
 
-bool TCPEar::Connection::process()
+bool TCPEgress::Connection::process()
 {
   /* We must have enough bytes for the header. */
   if (len < 6) return false;
@@ -153,7 +153,7 @@ bool TCPEar::Connection::process()
   return true;
 }
 
-void TCPEar::Connection::handle_fd(uint32_t)
+void TCPEgress::Connection::handle_fd(uint32_t)
 {
   ssize_t rc = recv(sock, buf + len, sizeof buf - len, 0);
   if (rc <= 0) {
@@ -176,26 +176,26 @@ void TCPEar::Connection::handle_fd(uint32_t)
     ;
 }
 
-TCPEar::TCPEar(Scheduler &sched, const YAML::Node &cfg)
+TCPEgress::TCPEgress(Scheduler &sched, const YAML::Node &cfg)
   : sched(sched),
-    idev(sched, std::bind(&TCPEar::flush, this)),
+    idev(sched, std::bind(&TCPEgress::flush, this)),
     ipv4(cfg["ipv4"].as<bool>("true")),
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>()) { }
 
-void TCPEar::flush()
+void TCPEgress::flush()
 {
   /* Go through all connections, deleting those which are closed. */
   conns.remove_if([](Connection &c) { return c.sock < 0; });
 }
 
-void TCPEar::channel(unsigned label, std::shared_ptr<Exit> dst)
+void TCPEgress::channel(unsigned label, std::shared_ptr<Exit> dst)
 {
   exits[label].insert(dst);
 }
 
-void TCPEar::activate()
+void TCPEgress::activate()
 {
   /* Restrict what we're looking for. */
   struct addrinfo hints;
@@ -238,14 +238,14 @@ void TCPEar::activate()
   }
 }
 
-Ear *make_ear(Scheduler &sched,
-              const std::string &ear_name,
-              const std::map<std::string, std::shared_ptr<Exit>> &refs,
-              const YAML::Node &cfg)
+Egress *make_egress(Scheduler &sched,
+                    const std::string &egress_name,
+                    const std::map<std::string, std::shared_ptr<Exit>> &refs,
+                    const YAML::Node &cfg)
 {
-  Ear *result = nullptr;
+  Egress *result = nullptr;
   if (cfg["tcp"]) {
-    result = new TCPEar(sched, cfg["tcp"]);
+    result = new TCPEgress(sched, cfg["tcp"]);
   }
   if (result) {
     if (cfg["channel"]) {
@@ -258,8 +258,8 @@ Ear *make_ear(Scheduler &sched,
           auto pos = refs.find(name);
           if (pos == refs.end()) {
             delete result;
-            throw std::runtime_error(sformat("unknown exit %s for ear %s",
-                                             name.c_str(), ear_name.c_str()));
+            throw std::runtime_error(sformat("unknown exit %s for egress %s",
+                                             name.c_str(), egress_name.c_str()));
           }
           result->channel(label, pos->second);
         }

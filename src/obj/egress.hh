@@ -34,8 +34,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ears_included
-#define ears_included
+#ifndef egress_included
+#define egress_included
 
 #include <string>
 #include <map>
@@ -52,30 +52,30 @@
 
 class Exit;
 
-struct Ear {
+struct Egress {
   virtual void activate() { };
   virtual void channel(unsigned, std::shared_ptr<Exit> dst) = 0;
-  virtual ~Ear() = default;
+  virtual ~Egress() = default;
 };
 
-class TCPEar : public Ear {
+class TCPEgress : public Egress {
   class Listener {
-    friend TCPEar;
-    TCPEar &parent;
+    friend TCPEgress;
+    TCPEgress &parent;
     int sock;
     void handle_fd(uint32_t);
     DescriptorEvent fdev;
 
   public:
-    Listener(TCPEar &, int sock);
+    Listener(TCPEgress &, int sock);
     ~Listener();
   };
   friend class Listener;
   std::list<Listener> listeners;
 
   class Connection {
-    friend TCPEar;
-    TCPEar &parent;
+    friend TCPEgress;
+    TCPEgress &parent;
     int sock;
     void handle_fd(uint32_t);
     unsigned char buf[4 + 2 + 65507];
@@ -85,7 +85,7 @@ class TCPEar : public Ear {
     bool process();
 
   public:
-    Connection(TCPEar &, int sock);
+    Connection(TCPEgress &, int sock);
     ~Connection();
   };
   friend class Connection;
@@ -100,14 +100,14 @@ class TCPEar : public Ear {
   void flush();
 
 public:
-  TCPEar(Scheduler &sched, const YAML::Node &cfg);
+  TCPEgress(Scheduler &sched, const YAML::Node &cfg);
   void activate();
   void channel(unsigned, std::shared_ptr<Exit> dst);
 };
 
-Ear *make_ear(Scheduler &,
-              const std::string &ear_name,
-              const std::map<std::string, std::shared_ptr<Exit>> &refs,
-              const YAML::Node &);
+Egress *make_egress(Scheduler &,
+                    const std::string &egress_name,
+                    const std::map<std::string, std::shared_ptr<Exit>> &refs,
+                    const YAML::Node &);
 
 #endif
