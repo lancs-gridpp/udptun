@@ -71,8 +71,13 @@ void TCPEgress::Listener::handle_fd(uint32_t)
       case EHOSTUNREACH:
       case EOPNOTSUPP:
       case ENETUNREACH:
-      case EAGAIN:
         continue;
+
+      case ECONNABORTED:
+      case EINTR:
+      case ENOBUFS:
+      case ENOMEM:
+        break;
 
       default:
         fdev.cancel();
@@ -83,8 +88,20 @@ void TCPEgress::Listener::handle_fd(uint32_t)
       }
     }
 
-    /* A connection was established.  Make sure we use it. */
-    parent.conns.emplace_back(parent, clsock);
+    switch (errno) {
+      case ECONNABORTED:
+      case EINTR:
+      case ENOBUFS:
+      case ENOMEM:
+        /* There's nothing to do in these cases.  Wait for another
+           connection. */
+        break;
+
+    default:
+      /* A connection was established.  Make sure we use it. */
+      parent.conns.emplace_back(parent, clsock);
+      break;
+    }
 
     /* Get ready to accept another connection. */
     fdev.set(sock, EPOLLIN);
