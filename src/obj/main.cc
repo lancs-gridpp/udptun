@@ -187,17 +187,20 @@ int main(int argc, const char *const *argv)
                               return new Destination(cfg);
                             });
       std::map<std::string, std::shared_ptr<Exit>> exits;
-      if (root["exits"]) {
-        for (auto iter = root["exits"].begin();
-             iter != root["exits"].end(); iter++) {
-          make_exits(sched, quota, egress_qdir, *iter,
-                     [&dmap = destinations](const std::string &dname) {
-                       auto pos = dmap.find(dname);
-                       if (pos == dmap.end())
-                         return std::shared_ptr<Destination>();
-                       return pos->second;
-                     },
-                     exits);
+      if (root["sockets"]) {
+        auto socket_root = root["sockets"];
+        if (socket_root["egress"]) {
+          for (auto iter = socket_root["egress"].begin();
+               iter != socket_root["egress"].end(); iter++) {
+            make_exits(sched, quota, egress_qdir, *iter,
+                       [&dmap = destinations](const std::string &dname) {
+                         auto pos = dmap.find(dname);
+                         if (pos == dmap.end())
+                           return std::shared_ptr<Destination>();
+                         return pos->second;
+                       },
+                       exits);
+          }
         }
       }
       if (root["tunnels"]) {
