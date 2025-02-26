@@ -50,7 +50,7 @@
 #include "payloads.hh"
 #include "queues.hh"
 
-class Egress;
+class Emitter;
 class Quota;
 class Destination;
 
@@ -62,14 +62,14 @@ class Exit {
   void downstream_ready();
   bool okay;
 
-  std::shared_ptr<Egress> egress;
+  std::shared_ptr<Emitter> emitter;
   std::shared_ptr<Destination> destination;
 
 public:
   Exit(Scheduler &sched,
        Quota &quota,
        const std::filesystem::path &dir,
-       std::shared_ptr<Egress>,
+       std::shared_ptr<Emitter>,
        std::shared_ptr<Destination>);
   void activate();
   void deliver(const void *, std::size_t);

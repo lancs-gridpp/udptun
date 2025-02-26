@@ -51,9 +51,9 @@
 
 #include "destruction.hh"
 #include "formatting.hh"
-#include "egress.hh"
+#include "emitters.hh"
 
-void Egress::handle_fd(uint32_t events)
+void Emitter::handle_fd(uint32_t events)
 {
   ready = true;
 
@@ -63,14 +63,14 @@ void Egress::handle_fd(uint32_t events)
   users.clear();
 }
 
-Egress::Egress(Scheduler &sched, const YAML::Node &cfg)
+Emitter::Emitter(Scheduler &sched, const YAML::Node &cfg)
   : ipv4(cfg["ipv4"].as<bool>("true")),
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>()), sock(-1), ready(false),
-    fdev(sched, std::bind(&Egress::handle_fd, this, std::placeholders::_1)) { }
+    fdev(sched, std::bind(&Emitter::handle_fd, this, std::placeholders::_1)) { }
 
-void Egress::activate()
+void Emitter::activate()
 {
   if (sock >= 0) return;
   /* Restrict what we're looking for. */
@@ -115,7 +115,7 @@ void Egress::activate()
   /* We failed to create a socket, so gather the error messages
      together. */
   std::stringstream msg;
-  msg << "bad egress socket";
+  msg << "bad emitter";
   for (auto ent : bad) {
     auto sai = ent.first;
     auto &prb = ent.second;
@@ -125,7 +125,7 @@ void Egress::activate()
   throw std::runtime_error(msg.str());
 }
 
-int Egress::send(const void *buf, size_t len, Destination &dst, int flags)
+int Emitter::send(const void *buf, size_t len, Destination &dst, int flags)
 {
   if (!ready) {
     /* Tell the caller that we can't send now, but try again later. */
@@ -144,7 +144,7 @@ int Egress::send(const void *buf, size_t len, Destination &dst, int flags)
   return 0;
 }
 
-Egress::~Egress()
+Emitter::~Emitter()
 {
   /* Cancel users invoking us, although this set should be empty by
      now. */

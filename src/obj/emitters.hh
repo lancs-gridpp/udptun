@@ -34,8 +34,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef egress_included
-#define egress_included
+#ifndef emitters_included
+#define emitters_included
 
 #include <cstdint>
 #include <functional>
@@ -47,7 +47,7 @@
 #include "idle.hh"
 #include "destinations.hh"
 
-class Egress {
+class Emitter {
   const bool ipv4, ipv6;
   const std::string host, srv;
   int sock, family, protocol;
@@ -59,11 +59,11 @@ class Egress {
   void handle_fd(uint32_t);
 
 public:
-  Egress(Scheduler &sched, const YAML::Node &);
+  Emitter(Scheduler &sched, const YAML::Node &);
   void activate();
   int send(const void *buf, size_t len, Destination &, int flags);
   void notify(IdleEvent &user) { users.insert(&user); }
-  ~Egress();
+  ~Emitter();
 };
 
 #endif

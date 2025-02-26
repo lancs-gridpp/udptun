@@ -40,7 +40,7 @@
 #include <stdexcept>
 
 #include "exits.hh"
-#include "egress.hh"
+#include "emitters.hh"
 #include "formatting.hh"
 
 void make_exits(Scheduler &sched, Quota &quota,
@@ -48,7 +48,7 @@ void make_exits(Scheduler &sched, Quota &quota,
                 std::function<std::shared_ptr<Destination>(const std::string &)> dests,
                 std::map<std::string, std::shared_ptr<Exit>> &out)
 {
-  auto egress = std::make_shared<Egress>(sched, cfg["udp"]);
+  auto emitter = std::make_shared<Emitter>(sched, cfg["udp"]);
   const auto end = cfg["names"].end();
   for (auto iter = cfg["names"].begin(); iter != end; iter++) {
     auto name = iter->first.as<std::string>();
@@ -57,23 +57,23 @@ void make_exits(Scheduler &sched, Quota &quota,
     if (!dest)
       throw std::runtime_error(sformat("unknown destination %s for exit %s",
                                        dest_name.c_str(), name.c_str()));
-    out[name] = std::make_shared<Exit>(sched, quota, dir / name, egress, dest);
+    out[name] = std::make_shared<Exit>(sched, quota, dir / name, emitter, dest);
   }
 }
 
 Exit::Exit(Scheduler &sched,
            Quota &quota,
            const std::filesystem::path &dir,
-           std::shared_ptr<Egress> egress,
+           std::shared_ptr<Emitter> emitter,
            std::shared_ptr<Destination> dest)
   : queue(100 * 1024, quota, dir,
           std::bind(&Exit::accept, this, std::placeholders::_1)),
     downstream_event(sched, std::bind(&Exit::downstream_ready, this)),
-    okay(false), egress(egress), destination(dest) { }
+    okay(false), emitter(emitter), destination(dest) { }
 
 void Exit::activate()
 {
-  egress->activate();
+  emitter->activate();
 }
 
 bool Exit::accept(Payload &&pl)
@@ -81,15 +81,15 @@ bool Exit::accept(Payload &&pl)
   /* If we're not ready to send, ensure that we will be notified when
      ready, and indicate that we have not consumed the payload. */
   if (!okay) {
-    egress->notify(downstream_event);
+    emitter->notify(downstream_event);
     return false;
   }
 
   /* Try to send the payload. */
-  auto rc = egress->send(pl.base(), pl.size(), *destination.get(), 0);
+  auto rc = emitter->send(pl.base(), pl.size(), *destination.get(), 0);
   if (rc == EWOULDBLOCK) {
     okay = false;
-    egress->notify(downstream_event);
+    emitter->notify(downstream_event);
     return false;
   }
 
