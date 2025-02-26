@@ -200,10 +200,13 @@ int main(int argc, const char *const *argv)
                      exits);
         }
       }
-      populate<Egress>(egress_index, "egress", root,
-                       std::bind(&make_egress, sched,
-                                 std::placeholders::_1,
-                                 exits, std::placeholders::_2));
+      if (root["tunnels"]) {
+        auto tunnel_root = root["tunnels"];
+        populate<Egress>(egress_index, "egress", tunnel_root,
+                         std::bind(&make_egress, sched,
+                                   std::placeholders::_1,
+                                   exits, std::placeholders::_2));
+      }
     }
 
     more = true;
