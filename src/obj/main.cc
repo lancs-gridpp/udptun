@@ -172,8 +172,8 @@ int main(int argc, const char *const *argv)
     /* Set the quota from configuration. */
     // TODO
 
-    std::filesystem::path exit_queuedir = queuedir / "exits";
-    std::filesystem::path tunnel_queuedir = queuedir / "tunnels";
+    std::filesystem::path egress_qdir = queuedir / "egress";
+    std::filesystem::path ingress_qdir = queuedir / "ingress";
 
     //std::map<std::string, std::unique_ptr<Tunnel>> tunnels;
 
@@ -190,7 +190,7 @@ int main(int argc, const char *const *argv)
       if (root["exits"]) {
         for (auto iter = root["exits"].begin();
              iter != root["exits"].end(); iter++) {
-          make_exits(sched, quota, exit_queuedir, *iter,
+          make_exits(sched, quota, egress_qdir, *iter,
                      [&dmap = destinations](const std::string &dname) {
                        auto pos = dmap.find(dname);
                        if (pos == dmap.end())
