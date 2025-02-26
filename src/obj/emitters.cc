@@ -37,6 +37,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/epoll.h>
 #include <netdb.h>
 
 #include <cassert>
@@ -127,10 +128,12 @@ void Emitter::activate()
 
 int Emitter::send(const void *buf, size_t len, Destination &dst, int flags)
 {
-  if (!ready) {
-    /* Tell the caller that we can't send now, but try again later. */
+  /* Don't bother calling again if we're already blocked. */
+  if (!ready)
     return EWOULDBLOCK;
-  }
+
+  /* Make this call non-blocking. */
+  flags |= MSG_DONTWAIT;
 
   assert(sock >= 0);
   auto rc = dst.send(family, protocol, sock, buf, len, flags);
@@ -140,7 +143,17 @@ int Emitter::send(const void *buf, size_t len, Destination &dst, int flags)
   if (rc < 0 && errno == ECONNREFUSED)
     rc = dst.send(family, protocol, sock, buf, len, flags);
 
-  ready = false;
+  if (rc < 0) {
+    /* If we'd block (not that it's likely), ask the scheduler to tell
+       us when we wouldn't, and record that there's no point in trying
+       again until we can. */
+    if (errno == EWOULDBLOCK) {
+      fdev.set(sock, EPOLLOUT);
+      ready = false;
+    }
+    return errno;
+  }
+
   return 0;
 }
 
