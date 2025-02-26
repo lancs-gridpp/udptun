@@ -181,46 +181,52 @@ int main(int argc, const char *const *argv)
     //std::vector<std::shared_ptr<Absorber>> absorber_set;
     std::map<std::string, std::shared_ptr<Egress>> egress_index;
     {
-      /* TODO: Create an index of named tunnel egresses.  Each will
-         form a stream connection to a tunnel ingress on another host.
-         Ingresses unused by any channel are quietly destroyed on exit
-         from this block. */
-      //std::map<std::string, std::shared_ptr<Ingress>> ingress_index;
+      if (root["ingress"]) {
+        const auto &ingress_root = root["ingress"];
 
-      /* TODO: Create an index of named channels.  Each channel
-         identifies a tunnel ingress and a label set to send datagrams
-         through.  It also maintains a named message queue.  Channels
-         unused by any absorber are quietly destroyed on exit from
-         this block. */
-      //std::map<std::string, std::shared_ptr<Channel>> channel_index;
+        /* TODO: Create an index of named tunnel egresses.  Each will
+           form a stream connection to a tunnel ingress on another
+           host.  Ingresses unused by any channel are quietly
+           destroyed on exit from this block. */
+        //std::map<std::string, std::shared_ptr<Ingress>> ingress_index;
 
-      /* TODO: Populate the table of absorbers.  Each will create a
-         datagram socket, and anything it receives will be sent to
-         each of its channels, which it retains a reference to. */
+        /* TODO: Create an index of named channels.  Each channel
+           identifies a tunnel ingress and a label set to send
+           datagrams through.  It also maintains a named message
+           queue.  Channels unused by any absorber are quietly
+           destroyed on exit from this block. */
+        //std::map<std::string, std::shared_ptr<Channel>> channel_index;
 
-      /* Create an index of named destinations.  Exits will refer to
-         these by name.  Any not used after the block exits will be
-         quietly destroyed. */
-      std::map<std::string, std::shared_ptr<Destination>> destinations;
-      populate<Destination>(destinations, "destinations", root,
-                            [](const std::string &inst,
-                               const YAML::Node &cfg) {
-                              return new Destination(cfg);
-                            });
+        /* TODO: Populate the table of absorbers.  Each will create a
+           datagram socket, and anything it receives will be sent to
+           each of its channels, which it retains a reference to. */
+      }
 
-      /* Create an index of named exits, and the emitters they share.
-         Each exit uses exactly one emitter, and keeps a shared
-         reference to it.  Each exit also uses exactly one named
-         destination, preventing it from being destroyed.  Any
-         resources not used after the block exits will be quietly
-         destroyed.  An exit retains a message queue, indexed by its
-         name. */
-      std::map<std::string, std::shared_ptr<Exit>> exit_index;
-      if (root["sockets"]) {
+      if (root["egress"]) {
+        const auto &egress_root = root["egress"];
+
+        /* Create an index of named destinations.  Exits will refer to
+           these by name.  Any not used after the block exits will be
+           quietly destroyed. */
+        std::map<std::string, std::shared_ptr<Destination>> destinations;
+        populate<Destination>(destinations, "destinations", egress_root,
+                              [](const std::string &inst,
+                                 const YAML::Node &cfg) {
+                                return new Destination(cfg);
+                              });
+
+        /* Create an index of named exits, and the emitters they
+           share.  Each exit uses exactly one emitter, and keeps a
+           shared reference to it.  Each exit also uses exactly one
+           named destination, preventing it from being destroyed.  Any
+           resources not used after the block exits will be quietly
+           destroyed.  An exit retains a message queue, indexed by its
+           name. */
+        std::map<std::string, std::shared_ptr<Exit>> exit_index;
         const auto &socket_root = root["sockets"];
-        if (socket_root["egress"]) {
-          for (auto iter = socket_root["egress"].begin();
-               iter != socket_root["egress"].end(); iter++) {
+        if (egress_root["sockets"]) {
+          for (auto iter = egress_root["sockets"].begin();
+               iter != egress_root["sockets"].end(); iter++) {
             make_exits(sched, quota, egress_qdir, *iter,
                        [&dmap = destinations](const std::string &dname) {
                          auto pos = dmap.find(dname);
@@ -231,19 +237,17 @@ int main(int argc, const char *const *argv)
                        exit_index);
           }
         }
-      }
 
-      if (root["tunnels"]) {
-        const auto &tunnel_root = root["tunnels"];
-
-        /* Create the configured egresses, using the available exits.
-           Sockets are not created at this stage; only dependencies
-           are established, so that missing dependencies will fail
-           the configuration phase. */
-        populate<Egress>(egress_index, "egress", tunnel_root,
-                         std::bind(&make_egress, sched,
-                                   std::placeholders::_1,
-                                   exit_index, std::placeholders::_2));
+        if (egress_root["tunnels"]) {
+          /* Create the configured egresses, using the available
+             exits.  Sockets are not created at this stage; only
+             dependencies are established, so that missing
+             dependencies will fail the configuration phase. */
+          populate<Egress>(egress_index, "tunnels", egress_root,
+                           std::bind(&make_egress, sched,
+                                     std::placeholders::_1,
+                                     exit_index, std::placeholders::_2));
+        }
       }
     }
 
