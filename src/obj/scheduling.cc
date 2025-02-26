@@ -37,6 +37,7 @@
 #include <sys/epoll.h>
 
 #include <csignal>
+#include <climits>
 
 #include <system_error>
 
@@ -92,8 +93,9 @@ int Scheduler::timeout()
   TimePeriod delay = first - now;
   //std::cerr << "delay " << delay.amount << " unit " << delay.unit << std::endl;
   delay.clamp_nonnegative();
-  /* TODO: Clamp actual result to INT_MAX or less. */
-  int res = delay.to_milliseconds();
+  /* Clamp actual result in milliseconds to INT_MAX or less. */
+  uintmax_t res = delay.to_milliseconds();
+  if (res > INT_MAX) res = INT_MAX;
   //std::cerr << "timeout is " << res << std::endl;
   return res;
 }
