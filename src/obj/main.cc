@@ -103,7 +103,8 @@ static void populate(std::map<std::string, std::shared_ptr<T>> &dst,
 int main(int argc, const char *const *argv)
 {
   /* Arguments are just filename configurations. */
-  std::vector<std::string> config_filenames(argc - 1);
+  std::vector<std::string> config_filenames;
+  config_filenames.reserve(argc - 1);
   for (int i = 1; i < argc; i++)
     config_filenames.push_back(argv[i]);
   Config config(config_filenames);
