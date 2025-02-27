@@ -45,7 +45,7 @@
 
 void make_exits(Scheduler &sched, Quota &quota,
                 const std::filesystem::path &dir, const YAML::Node &cfg,
-                std::function<std::shared_ptr<Destination>(const std::string &)> dests,
+                destination_index_t dests,
                 std::map<std::string, std::shared_ptr<Exit>> &out)
 {
   auto emitter = std::make_shared<Emitter>(sched, cfg["udp"]);

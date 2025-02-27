@@ -76,9 +76,12 @@ public:
   ~Exit();
 };
 
+typedef std::function<std::shared_ptr<Destination>(const std::string &)>
+destination_index_t;
+
 void make_exits(Scheduler &sched, Quota &,
                 const std::filesystem::path &dir, const YAML::Node &,
-                std::function<std::shared_ptr<Destination>(const std::string &)> dests,
+                destination_index_t dests,
                 std::map<std::string, std::shared_ptr<Exit>> &);
 
 #endif
