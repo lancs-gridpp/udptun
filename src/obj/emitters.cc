@@ -146,10 +146,12 @@ int Emitter::send(const void *buf, size_t len, Destination &dst, int flags)
   if (rc < 0) {
     /* If we'd block (not that it's likely), ask the scheduler to tell
        us when we wouldn't, and record that there's no point in trying
-       again until we can. */
-    if (errno == EWOULDBLOCK) {
+       again until we can.  Also standardize the returned error
+       code. */
+    if (errno == EWOULDBLOCK || errno == EAGAIN) {
       fdev.set(sock, EPOLLOUT);
       ready = false;
+      return EWOULDBLOCK;
     }
     return errno;
   }

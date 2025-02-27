@@ -87,7 +87,7 @@ bool Exit::accept(Payload &&pl)
 
   /* Try to send the payload. */
   auto rc = emitter->send(pl.base(), pl.size(), *destination.get(), 0);
-  if (rc == EWOULDBLOCK) {
+  if (rc == EWOULDBLOCK || rc == EAGAIN) {
     okay = false;
     emitter->notify(downstream_event);
     return false;
