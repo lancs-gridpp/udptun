@@ -46,18 +46,23 @@ Config::Config(const std::vector<std::string> &source_files)
 YAML::Node Config::get()
 {
   YAML::Node result;
-  result["tunnels"];
-  result["channels"];
-  result["sources"];
-  result["ears"];
-  result["exits"];
+  result["ingress"]["tunnels"];
+  result["ingress"]["channels"];
+  result["ingress"]["sockets"];
+  result["egress"]["tunnels"];
+  result["egress"]["destinations"];
+  result["egress"]["sockets"];
   for (auto &fn : source_files) {
     YAML::Node elem = YAML::LoadFile(fn);
     for (auto kiter = result.begin(); kiter != result.end(); kiter++) {
       const std::string k = kiter->first.as<std::string>();
-      const auto end = elem[k].end();
-      for (auto iter = elem[k].begin(); iter != end; iter++)
-        result[k].push_back(*iter);
+      const auto kend = kiter->second.end();
+      for (auto k2iter = kiter->second.begin(); k2iter != kend; k2iter++) {
+        const std::string k2 = k2iter->first.as<std::string>();
+        const auto end = k2iter->second.end();
+        for (auto iter = k2iter->second.begin(); iter != end; iter++)
+          result[k][k2].push_back(*iter);
+      }
     }
   }
   return result;
