@@ -98,6 +98,11 @@ bool Exit::accept(Payload &&pl)
   return true;
 }
 
+Exit::~Exit()
+{
+  emitter->forget(downstream_event);
+}
+
 void Exit::deliver(const void *base, std::size_t len)
 {
   queue.push(base, len);

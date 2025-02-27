@@ -73,6 +73,7 @@ public:
        std::shared_ptr<Destination>);
   void activate();
   void deliver(const void *, std::size_t);
+  ~Exit();
 };
 
 void make_exits(Scheduler &sched, Quota &,

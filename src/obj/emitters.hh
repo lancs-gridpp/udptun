@@ -63,6 +63,7 @@ public:
   void activate();
   int send(const void *buf, size_t len, Destination &, int flags);
   void notify(IdleEvent &user) { users.insert(&user); }
+  void forget(IdleEvent &user) { users.erase(&user); }
   ~Emitter();
 };
 
