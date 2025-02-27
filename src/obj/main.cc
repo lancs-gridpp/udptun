@@ -181,7 +181,7 @@ int main(int argc, const char *const *argv)
     //std::vector<std::shared_ptr<Absorber>> absorber_set;
     std::map<std::string, std::shared_ptr<Egress>> egress_index;
     {
-      if (root["ingress"]) {
+      {
         const auto &ingress_root = root["ingress"];
 
         /* TODO: Create an index of named tunnel egresses.  Each will
@@ -202,7 +202,7 @@ int main(int argc, const char *const *argv)
            each of its channels, which it retains a reference to. */
       }
 
-      if (root["egress"]) {
+      {
         const auto &egress_root = root["egress"];
 
         /* Create an index of named destinations.  Exits will refer to
@@ -223,8 +223,8 @@ int main(int argc, const char *const *argv)
            destroyed.  An exit retains a message queue, indexed by its
            name. */
         std::map<std::string, std::shared_ptr<Exit>> exit_index;
-        const auto &socket_root = root["sockets"];
-        if (egress_root["sockets"]) {
+        {
+          const auto &socket_root = egress_root["sockets"];
           for (auto iter = egress_root["sockets"].begin();
                iter != egress_root["sockets"].end(); iter++) {
             make_exits(sched, quota, egress_qdir, *iter,
@@ -238,16 +238,14 @@ int main(int argc, const char *const *argv)
           }
         }
 
-        if (egress_root["tunnels"]) {
-          /* Create the configured egresses, using the available
-             exits.  Sockets are not created at this stage; only
-             dependencies are established, so that missing
-             dependencies will fail the configuration phase. */
-          populate<Egress>(egress_index, "tunnels", egress_root,
-                           std::bind(&make_egress, sched,
-                                     std::placeholders::_1,
-                                     exit_index, std::placeholders::_2));
-        }
+        /* Create the configured egresses, using the available exits.
+           Sockets are not created at this stage; only dependencies
+           are established, so that missing dependencies will fail the
+           configuration phase. */
+        populate<Egress>(egress_index, "tunnels", egress_root,
+                         std::bind(&make_egress, sched,
+                                   std::placeholders::_1,
+                                   exit_index, std::placeholders::_2));
       }
     }
 
