@@ -129,7 +129,7 @@ void Emitter::activate()
 int Emitter::send(const void *buf, size_t len, Destination &dst, int flags)
 {
   if (sock < 0)
-    return EBADFD;
+    return EBADF;
 
   /* Don't bother calling again if we're already blocked. */
   if (!ready)
