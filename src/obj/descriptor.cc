@@ -36,6 +36,8 @@
 
 #include <sys/epoll.h>
 
+#include <cassert>
+
 #include <system_error>
 #include <sstream>
 
@@ -99,6 +101,7 @@ void DescriptorEvent::update(uint32_t events)
 
 void Scheduler::add(DescriptorEvent *mom, bool mod)
 {
+  assert(mom->fd >= 0);
   struct epoll_event epe;
   epe.events = mom->expected;
   epe.data.ptr = mom;
@@ -109,6 +112,7 @@ void Scheduler::add(DescriptorEvent *mom, bool mod)
 
 void Scheduler::remove(DescriptorEvent *mom)
 {
+  if (mom->fd < 0) return;
   struct epoll_event epe; // unused
   if (epoll_ctl(epfd, EPOLL_CTL_DEL, mom->fd, &epe) < 0)
     throw std::system_error(errno, std::system_category(), "epoll_ctl(DEL)");
