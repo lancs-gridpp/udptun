@@ -244,9 +244,10 @@ int main(int argc, const char *const *argv)
            are established, so that missing dependencies will fail the
            configuration phase. */
         populate<Egress>(egress_index, "tunnels", egress_root,
-                         std::bind(&make_egress, sched,
-                                   std::placeholders::_1,
-                                   exit_index, std::placeholders::_2));
+                         [&sched, &exit_index](const std::string &inst,
+                                               const YAML::Node &cfg) {
+                           return make_egress(sched, inst, exit_index, cfg);
+                         });
       }
     }
 
