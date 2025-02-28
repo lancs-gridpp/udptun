@@ -274,12 +274,12 @@ Egress *make_egress(Scheduler &sched,
     result = new TCPEgress(sched, cfg["tcp"]);
   }
   if (result) {
-    if (cfg["channel"]) {
-      auto end = cfg["channel"].end();
-      for (auto iter = cfg["channel"].begin(); iter != end; iter++) {
-        auto label = (*iter)["label"].as<unsigned>();
-        auto cend = (*iter)["exits"].end();
-        for (auto citer = (*iter)["exits"].begin(); citer != end; citer++) {
+    if (cfg["channels"]) {
+      auto end = cfg["channels"].end();
+      for (auto iter = cfg["channels"].begin(); iter != end; iter++) {
+        auto label = iter->first.as<unsigned>();
+        auto cend = iter->second.end();
+        for (auto citer = iter->second.begin(); citer != end; citer++) {
           auto name = citer->as<std::string>();
           auto pos = refs.find(name);
           if (pos == refs.end()) {
