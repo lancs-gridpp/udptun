@@ -111,7 +111,10 @@ void TCPEgress::Listener::handle_fd(uint32_t)
 TCPEgress::Listener::Listener(TCPEgress &parent, int sock)
   : parent(parent), sock(sock),
     fdev(parent.sched,
-         std::bind(&Listener::handle_fd, this, std::placeholders::_1)) { }
+         std::bind(&Listener::handle_fd, this, std::placeholders::_1))
+{
+  fdev.set(sock, EPOLLIN);
+}
 
 TCPEgress::Listener::~Listener()
 {
