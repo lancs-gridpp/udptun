@@ -175,6 +175,8 @@ int main(int argc, const char *const *argv)
 
     std::filesystem::path egress_qdir = queuedir / "egress";
     std::filesystem::path ingress_qdir = queuedir / "ingress";
+    std::filesystem::create_directory(egress_qdir);
+    std::filesystem::create_directory(ingress_qdir);
 
     /* Prepare to create indices of egresses and absorber.  These are
        retained within a reset iteration, but discarded before the
