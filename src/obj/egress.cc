@@ -279,7 +279,7 @@ Egress *make_egress(Scheduler &sched,
       for (auto iter = cfg["channels"].begin(); iter != end; iter++) {
         auto label = iter->first.as<unsigned>();
         auto cend = iter->second.end();
-        for (auto citer = iter->second.begin(); citer != end; citer++) {
+        for (auto citer = iter->second.begin(); citer != cend; citer++) {
           auto name = citer->as<std::string>();
           auto pos = refs.find(name);
           if (pos == refs.end()) {
