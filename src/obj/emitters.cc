@@ -65,10 +65,12 @@ void Emitter::handle_fd(uint32_t events)
 }
 
 Emitter::Emitter(Scheduler &sched, const YAML::Node &cfg)
-  : ipv4(cfg["ipv4"].as<bool>("true")),
-    ipv6(cfg["ipv6"].as<bool>("true")),
-    host(cfg["host"].as<std::string>("localhost")),
-    srv(cfg["port"].as<std::string>()), sock(-1), ready(false),
+  : ipv4(cfg ? cfg["ipv4"].as<bool>("true") : true),
+    ipv6(cfg ? cfg["ipv6"].as<bool>("true") : true),
+    host(cfg ? cfg["host"].as<std::string>("localhost")
+         : std::string("localhost")),
+    srv(cfg ? cfg["port"].as<std::string>() : std::string()),
+    sock(-1), ready(false),
     fdev(sched, std::bind(&Emitter::handle_fd, this, std::placeholders::_1)) { }
 
 void Emitter::activate()
