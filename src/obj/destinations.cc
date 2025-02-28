@@ -36,6 +36,7 @@
 
 #include <netdb.h>
 
+#include <cassert>
 #include <cstring>
 #include <cerrno>
 
@@ -72,11 +73,17 @@ Destination::Destination(const YAML::Node &cfg)
   /* Store each result indexed by address family and protocol. */
   for (auto iter = info; iter; iter = iter->ai_next) {
     Key key(iter->ai_family, iter->ai_protocol);
-    memset(&options[key].addr, 0, sizeof options[key].addr);
-    memcpy(&options[key].addr, iter->ai_addr, iter->ai_addrlen);
-    options[key].addrlen = iter->ai_addrlen;
+    options.try_emplace(key, iter->ai_addr, iter->ai_addrlen);
   }
 }
+
+Destination::Value::Value(const struct sockaddr *addr, socklen_t len)
+  : buf(len)
+{
+  assert(buf.size() == len);
+  std::memcpy(buf.data(), addr, len);
+}
+
 
 int Destination::send(int family, int protocol,
                           int sockfd, const void *buf, size_t len, int flags)
@@ -86,7 +93,7 @@ int Destination::send(int family, int protocol,
   if (pos == options.end())
     return ENOSYS;
   int rc = ::sendto(sockfd, buf, len, flags,
-                    &pos->second.addr, pos->second.addrlen);
+                    pos->second.addr(), pos->second.addrlen());
   if (rc == 0) return 0;
   return errno;
 }

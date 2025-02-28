@@ -40,6 +40,7 @@
 #include <sys/socket.h>
 
 #include <map>
+#include <vector>
 
 #include <yaml-cpp/yaml.h>
 
@@ -54,9 +55,15 @@ class Destination {
     }
   };
 
-  struct Value {
-    struct sockaddr addr;
-    socklen_t addrlen;
+  class Value {
+    std::vector<unsigned char> buf;
+
+  public:
+    Value(const struct sockaddr *, socklen_t);
+    const struct sockaddr *addr() {
+      return reinterpret_cast<sockaddr *>(buf.data());
+    }
+    socklen_t addrlen() { return buf.size(); }
   };    
   std::map<Key, Value> options;
 
