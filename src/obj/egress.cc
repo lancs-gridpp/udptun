@@ -43,9 +43,9 @@
 #include <cassert>
 #include <cerrno>
 #include <cstring>
+
 #include <system_error>
 #include <stdexcept>
-
 #include <functional>
 
 #include "egress.hh"
