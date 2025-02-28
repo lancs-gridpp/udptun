@@ -184,7 +184,7 @@ int main(int argc, const char *const *argv)
     //std::vector<std::shared_ptr<Absorber>> absorber_set;
     std::map<std::string, std::shared_ptr<Egress>> egress_index;
     {
-      {
+      if (root["ingress"]) {
         const auto &ingress_root = root["ingress"];
 
         /* TODO: Create an index of named tunnel egresses.  Each will
@@ -205,7 +205,7 @@ int main(int argc, const char *const *argv)
            each of its channels, which it retains a reference to. */
       }
 
-      {
+      if (root["egress"]) {
         const auto &egress_root = root["egress"];
 
         /* Create an index of named destinations.  Exits will refer to
@@ -226,7 +226,7 @@ int main(int argc, const char *const *argv)
            destroyed.  An exit retains a message queue, indexed by its
            name. */
         std::map<std::string, std::shared_ptr<Exit>> exit_index;
-        {
+        if (egress_root["sockets"]) {
           const auto &socket_root = egress_root["sockets"];
           for (auto iter = egress_root["sockets"].begin();
                iter != egress_root["sockets"].end(); iter++) {

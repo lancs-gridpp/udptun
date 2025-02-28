@@ -73,12 +73,6 @@ Config::Config(const std::vector<std::string> &source_files)
 YAML::Node Config::get()
 {
   YAML::Node result;
-  result["ingress"].push_back("tunnels");
-  result["ingress"].push_back("channels");
-  result["ingress"].push_back("sockets");
-  result["egress"].push_back("tunnels");
-  result["egress"].push_back("destinations");
-  result["egress"].push_back("sockets");
   for (auto &fn : source_files) {
     YAML::Node elem = YAML::LoadFile(fn);
     merge(result, elem);
