@@ -179,5 +179,6 @@ Scheduler::Scheduler() : epfd(-1)
 
 Scheduler::~Scheduler()
 {
-  ::close(epfd);
+  if (epfd >= 0)
+    ::close(epfd);
 }
