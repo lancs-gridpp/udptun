@@ -254,7 +254,8 @@ void TCPEgress::activate()
       throw std::system_error(ec, std::system_category(), "listen");
     }
 
-    conns.emplace_back(*this, sock);
+    assert(sock >= 0);
+    listeners.emplace_back(*this, sock);
   }
 }
 
