@@ -37,10 +37,27 @@
 #include <sys/epoll.h>
 
 #include <system_error>
+#include <sstream>
 
 #include "formatting.hh"
 #include "descriptor.hh"
 #include "scheduling.hh"
+
+std::string epoll_event_str(uint32_t events)
+{
+  std::stringstream out;
+  if (events & EPOLLIN) out << " IN";
+  if (events & EPOLLOUT) out << " OUT";
+  if (events & EPOLLRDHUP) out << " RDHUP";
+  if (events & EPOLLPRI) out << " PRI";
+  if (events & EPOLLERR) out << " ERR";
+  if (events & EPOLLHUP) out << " HUP";
+  if (events & EPOLLET) out << " ET";
+  if (events & EPOLLONESHOT) out << " ONESHOT";
+  if (events & EPOLLWAKEUP) out << " WAKEUP";
+  if (events & EPOLLEXCLUSIVE) out << " EXCLUSIVE";
+  return out.str();
+}
 
 DescriptorEvent::DescriptorEvent(Scheduler &sched, descriptor_handler_t action)
   : Event(sched), action(action), fd(-1) { }

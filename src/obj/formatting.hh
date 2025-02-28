@@ -37,6 +37,8 @@
 #ifndef formatting_included
 #define formatting_included
 
+#include <cstdint>
+
 #include <string>
 #include <stdexcept>
 #include <memory>
@@ -51,5 +53,7 @@ std::string sformat(const std::string &fmt, Args... args)
   std::snprintf(buf.get(), len + 1, fmt.c_str(), args...);
   return std::string(buf.get(), buf.get() + len);
 }
+
+std::string epoll_event_str(uint32_t events);
 
 #endif
