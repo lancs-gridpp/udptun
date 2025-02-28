@@ -40,6 +40,7 @@
 #include <netdb.h>
 #include <unistd.h>
 
+#include <cassert>
 #include <cerrno>
 #include <cstring>
 #include <system_error>
@@ -99,11 +100,13 @@ void TCPEgress::Listener::handle_fd(uint32_t)
 
     default:
       /* A connection was established.  Make sure we use it. */
+      assert(clsock >= 0);
       parent.conns.emplace_back(parent, clsock);
       break;
     }
 
     /* Get ready to accept another connection. */
+    assert(sock >= 0);
     fdev.set(sock, EPOLLIN);
   } while (true);
 }
@@ -130,6 +133,7 @@ TCPEgress::Connection::Connection(TCPEgress &parent, int sock)
          std::bind(&Connection::handle_fd, this, std::placeholders::_1))
 {
   /* Get ready to receive immediately. */
+  assert(sock >= 0);
   fdev.set(sock, EPOLLIN);
 }
 
@@ -175,6 +179,7 @@ bool TCPEgress::Connection::process()
 
 void TCPEgress::Connection::handle_fd(uint32_t)
 {
+  assert(sock >= 0);
   ssize_t rc = recv(sock, buf + len, sizeof buf - len, 0);
   if (rc <= 0) {
     /* The client has closed the connection, or it has timed out. */

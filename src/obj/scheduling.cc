@@ -38,6 +38,7 @@
 
 #include <csignal>
 #include <climits>
+#include <cassert>
 
 #include <system_error>
 
@@ -103,6 +104,7 @@ int Scheduler::timeout()
 void Scheduler::poll()
 {
   struct epoll_event events[20];
+  assert(epfd >= 0);
   int nfds = epoll_pwait(epfd,
                          events, sizeof events / sizeof events[0],
                          timeout(),
