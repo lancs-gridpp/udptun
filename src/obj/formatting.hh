@@ -34,6 +34,9 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef formatting_included
+#define formatting_included
+
 #include <string>
 #include <stdexcept>
 #include <memory>
@@ -49,3 +52,4 @@ std::string sformat(const std::string &fmt, Args... args)
   return std::string(buf.get(), buf.get() + len);
 }
 
+#endif
