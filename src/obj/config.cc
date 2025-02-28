@@ -40,30 +40,48 @@
 
 #include "config.hh"
 
+static void merge(YAML::Node &dst, const YAML::Node &src)
+{
+  switch (src.Type()) {
+  case YAML::NodeType::Null:
+  case YAML::NodeType::Undefined:
+    break;
+
+  case YAML::NodeType::Scalar:
+    dst = YAML::Node(src);
+    break;
+
+  case YAML::NodeType::Sequence:
+    for (auto iter = src.begin(); iter != src.end(); iter++)
+      dst.push_back(YAML::Node(*iter));
+    break;
+
+  case YAML::NodeType::Map:
+    for (auto iter = src.begin(); iter != src.end(); iter++) {
+      auto k = iter->first.as<std::string>();
+      YAML::Node ref = dst[k];
+      merge(ref, iter->second);
+      dst[k] = ref;
+    }
+    break;
+  }
+}
+
 Config::Config(const std::vector<std::string> &source_files)
   : source_files(source_files) { }
 
 YAML::Node Config::get()
 {
   YAML::Node result;
-  result["ingress"]["tunnels"];
-  result["ingress"]["channels"];
-  result["ingress"]["sockets"];
-  result["egress"]["tunnels"];
-  result["egress"]["destinations"];
-  result["egress"]["sockets"];
+  result["ingress"].push_back("tunnels");
+  result["ingress"].push_back("channels");
+  result["ingress"].push_back("sockets");
+  result["egress"].push_back("tunnels");
+  result["egress"].push_back("destinations");
+  result["egress"].push_back("sockets");
   for (auto &fn : source_files) {
     YAML::Node elem = YAML::LoadFile(fn);
-    for (auto kiter = result.begin(); kiter != result.end(); kiter++) {
-      const std::string k = kiter->first.as<std::string>();
-      const auto kend = kiter->second.end();
-      for (auto k2iter = kiter->second.begin(); k2iter != kend; k2iter++) {
-        const std::string k2 = k2iter->first.as<std::string>();
-        const auto end = k2iter->second.end();
-        for (auto iter = k2iter->second.begin(); iter != end; iter++)
-          result[k][k2].push_back(*iter);
-      }
-    }
+    merge(result, elem);
   }
   return result;
 }
