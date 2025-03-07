@@ -63,6 +63,8 @@
 #include "idle.hh"
 #include "timed.hh"
 #include "quotas.hh"
+#include "addressing.hh"
+#include "signaling.hh"
 
 static sig_atomic_t reload = 0, quit = 0;
 
@@ -118,6 +120,8 @@ int main(int argc, const char *const *argv)
     throw std::system_error(errno, std::system_category(), "sigaddset(INT)");
   if (sigaddset(&okay_sigs, SIGTERM) < 0)
     throw std::system_error(errno, std::system_category(), "sigaddset(TERM)");
+  if (sigaddset(&okay_sigs, SIGUSR2) < 0)
+    throw std::system_error(errno, std::system_category(), "sigaddset(USR2)");
 
   /* Block signals. */
   if (sigprocmask(SIG_BLOCK, &okay_sigs, nullptr) < 0)
@@ -151,6 +155,8 @@ int main(int argc, const char *const *argv)
     throw std::system_error(errno, std::system_category(), "sigemptyset");
   Scheduler sched;
   sched.signal_mask(poll_sigs);
+  SignalManager sigmgr(sched);
+  AddressManager addrmgr(sigmgr, SIGUSR2);
 
   Quota quota;
 
