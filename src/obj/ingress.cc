@@ -34,25 +34,138 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/epoll.h>
+
+#include <cassert>
+#include <cstring>
+
 #include <functional>
+#include <system_error>
 
 #include "ingress.hh"
 
-TCPIngress::TCPIngress(Scheduler &sched, const std::string &host, unsigned port)
-  : host(host), port(port),
-    fdev(sched, [this](uint32_t evs) { descriptor_event(evs); })
+TCPIngress::TCPIngress(Scheduler &sched,
+                       AddressManager &addrmgr,
+                       const std::string &host,
+                       const std::string &srv)
+  : host(host), srv(srv), sock(-1), connected(false),
+    fdev(sched, [this](uint32_t evs) { descriptor_event(evs); }),
+    rstev(sched, [this]() { restart_event(); }),
+    addrev(addrmgr, [this](const struct addrinfo *p) { address_resolved(p); })
+{ }
+
+TCPIngress::~TCPIngress()
 {
-  //epeh = std::bind(&TCPIngress::handle_event, this, std::placeholders::_1);
+  rstev.cancel();
+  fdev.cancel();
+  if (sock >= 0)
+    ::close(sock);
 }
 
 void TCPIngress::descriptor_event(uint32_t)
 {
+  /* The socket has become writable.  Is the connection operation just
+     completing? */
+  if (!connected) {
+    /* Re-issue the connection to get the error code. */
+    int rc = connect(sock, ainf->ai_addr, ainf->ai_addrlen);
+    if (rc < 0) {
+      assert(errno != EINPROGRESS);
+      // TODO: Log error.
+      ainf = ainf->ai_next;
+      try_connect();
+      return;
+    }
+
+    /* Record that the connection is complete, and wait for another
+       write event. */
+    connected = true;
+  }
+
+  /* Try writing a packet. */
   // TODO
 }
 
-void TCPIngress::open()
+void TCPIngress::restart_event()
 {
-  // TODO
+  /* Try restarting.  Clear out any existing socket. */
+  if (sock >= 0) ::close(sock), sock = -1;
+
+  /* Resolve the node and service. */
+  ainf = nullptr;
+  struct addrinfo hint;
+  memset(&hint, 0, sizeof hint);
+  hint.ai_family = AF_UNSPEC;
+  hint.ai_socktype = SOCK_STREAM;
+  hint.ai_flags = 0;
+  hint.ai_protocol = 0;
+  addrev.initiate(host, srv, &hint);
+}
+
+void TCPIngress::address_resolved(const struct addrinfo *p)
+{
+  /* Record the initial address to try. */
+  ainf = p;
+  connected = false;
+  try_connect();
+}
+
+void TCPIngress::try_connect()
+{
+  do {
+    /* Create the socket with the right parameters. */
+    while (ainf) {
+      sock = socket(ainf->ai_family, SOCK_STREAM, ainf->ai_protocol);
+      if (sock >= 0)
+        break;
+      ainf = ainf->ai_next;
+    }
+
+    if (sock < 0) {
+      /* We failed to open a socket.  Try again in a bit. */
+      rstev.set(TimePeriod(30, TimePeriod::SECOND));
+      return;
+    }
+
+    /* Make the socket non-blocking. */
+    {
+      int flags = fcntl(sock, F_GETFL, 0);
+      if (flags < 0)
+        throw std::system_error(errno, std::system_category(), "fcntl(GETFL)");
+      flags |= O_NONBLOCK;
+      int rc = fcntl(sock, F_SETFL, flags);
+      if (rc < 0)
+        throw std::system_error(errno, std::system_category(), "fcntl(GETFL)");
+    }
+
+    /* Perform a non-blocking connect. */
+    int rc = connect(sock, ainf->ai_addr, ainf->ai_addrlen);
+    if (rc < 0) {
+      if (errno != EINPROGRESS) {
+        // TODO: Log error.
+        /* Close the socket, and try the next address entry
+           immediately. */
+        ::close(sock), sock = -1;
+        ainf = ainf->ai_next;
+        continue;
+      }
+
+      /* We have initiated a non-blocking connect.  Get notified when
+         the connection can be resolved. */
+      fdev.set(sock, EPOLLOUT);
+      return;
+    }
+
+    /* We're immediately connected, so record that, and check when we
+       can actually write. */
+    connected = true;
+    fdev.set(sock, EPOLLOUT);
+    return;
+  } while (true);
 }
 
 void TCPIngress::submit(labelset_t, const void *data, std::size_t len)

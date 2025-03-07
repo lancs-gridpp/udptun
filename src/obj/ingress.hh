@@ -37,28 +37,42 @@
 #ifndef ingress_included
 #define ingress_included
 
+#include <netdb.h>
+
 #include <string>
 
 #include "descriptor.hh"
 #include "timed.hh"
 #include "labels.hh"
+#include "addrevent.hh"
 
 struct Ingress {
-  virtual void open() = 0;
   virtual void submit(labelset_t, const void *data, std::size_t len) = 0;
 };
 
 class TCPIngress : public Ingress {
   const std::string host;
-  const unsigned port;
+  const std::string srv;
+  int sock;
+  bool connected;
+
+  struct gaicb addrinfo;
 
   DescriptorEvent fdev;
   void descriptor_event(uint32_t);
 
+  TimedEvent rstev;
+  void restart_event();
+
+  const struct addrinfo *ainf;
+  AddressEvent addrev;
+  void address_resolved(const struct addrinfo *);
+  void try_connect();
+
 public:
-  TCPIngress(Scheduler &sched, const std::string &host, unsigned port);
+  TCPIngress(Scheduler &sched, AddressManager &,
+             const std::string &host, const std::string &srv);
   ~TCPIngress();
-  void open();
   void submit(labelset_t, const void *data, std::size_t len);
 };
 
