@@ -93,7 +93,10 @@ void TCPIngress::descriptor_event(uint32_t)
 void TCPIngress::restart_event()
 {
   /* Try restarting.  Clear out any existing socket. */
-  if (sock >= 0) ::close(sock), sock = -1;
+  if (sock >= 0) {
+    fdev.cancel();
+    ::close(sock), sock = -1;
+  }
 
   /* Resolve the node and service. */
   ainf = nullptr;
@@ -149,6 +152,7 @@ void TCPIngress::try_connect()
         // TODO: Log error.
         /* Close the socket, and try the next address entry
            immediately. */
+        fdev.cancel();
         ::close(sock), sock = -1;
         ainf = ainf->ai_next;
         continue;
