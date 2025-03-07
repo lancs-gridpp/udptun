@@ -37,6 +37,12 @@
 #ifndef labels_included
 #define labels_included
 
-typedef unsigned labelset_t;
+#include <cstdint>
+
+#include <limits>
+
+typedef uintmax_t labelset_t;
+constexpr unsigned MAX_LABELS = std::numeric_limits<labelset_t>::digits;
+constexpr unsigned MAX_LABEL_BYTES = (MAX_LABELS + 7) / 8;
 
 #endif
