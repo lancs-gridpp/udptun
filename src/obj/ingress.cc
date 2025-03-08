@@ -71,10 +71,13 @@ void TCPIngress::descriptor_event(uint32_t)
   /* The socket has become writable.  Is the connection operation just
      completing? */
   if (!connected) {
-    /* Re-issue the connection to get the error code. */
-    int rc = connect(sock, ainf->ai_addr, ainf->ai_addrlen);
-    if (rc < 0) {
-      assert(errno != EINPROGRESS);
+    int soerr;
+    socklen_t soerrlen = sizeof soerr;
+    int rc = getsockopt(sock, SOL_SOCKET, SO_ERROR, &soerr, &soerrlen);
+    if (rc != 0)
+      throw std::system_error(errno, std::system_category(),
+                              "getsockopt(SOL_SOCKET, SO_ERROR)");
+    if (soerr != 0) {
       // TODO: Log error.
       ainf = ainf->ai_next;
       try_connect();
