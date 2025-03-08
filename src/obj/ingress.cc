@@ -151,7 +151,8 @@ void TCPIngress::try_connect()
     /* Perform a non-blocking connect. */
     int rc = connect(sock, ainf->ai_addr, ainf->ai_addrlen);
     if (rc < 0) {
-      if (errno != EINPROGRESS) {
+      switch (errno) {
+      default:
         // TODO: Log error.
         /* Close the socket, and try the next address entry
            immediately. */
@@ -159,12 +160,14 @@ void TCPIngress::try_connect()
         ::close(sock), sock = -1;
         ainf = ainf->ai_next;
         continue;
-      }
 
-      /* We have initiated a non-blocking connect.  Get notified when
-         the connection can be resolved. */
-      fdev.set(sock, EPOLLOUT);
-      return;
+      case EINPROGRESS:
+      case EAGAIN:
+        /* We have initiated a non-blocking connect.  Get notified when
+           the connection can be resolved. */
+        fdev.set(sock, EPOLLOUT);
+        return;
+      }
     }
 
     /* We're immediately connected, so record that, and check when we
