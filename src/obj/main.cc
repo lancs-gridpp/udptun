@@ -65,6 +65,7 @@
 #include "quotas.hh"
 #include "addressing.hh"
 #include "signaling.hh"
+#include "channels.hh"
 
 static sig_atomic_t reload = 0, quit = 0;
 
