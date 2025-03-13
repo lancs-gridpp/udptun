@@ -67,6 +67,7 @@ class TCPIngress : public Ingress {
   const struct addrinfo *ainf;
   AddressEvent addrev;
   void address_resolved(const struct addrinfo *);
+  void clear_socket();
   void try_connect();
 
 public:

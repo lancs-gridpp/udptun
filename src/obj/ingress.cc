@@ -93,13 +93,20 @@ void TCPIngress::descriptor_event(uint32_t)
   // TODO
 }
 
+void TCPIngress::clear_socket()
+{
+  /* Close the socket, but first clear any expectation of an event, so
+     we don't get any nasty errors from epoll.  Mark the socket as
+     invalid, so we don't close it again (as it might belong to
+     someone else by then). */
+  fdev.cancel();
+  ::close(sock), sock = -1;
+}
+
 void TCPIngress::restart_event()
 {
   /* Try restarting.  Clear out any existing socket. */
-  if (sock >= 0) {
-    fdev.cancel();
-    ::close(sock), sock = -1;
-  }
+  if (sock >= 0) clear_socket();
 
   /* Resolve the node and service. */
   ainf = nullptr;
@@ -156,8 +163,7 @@ void TCPIngress::try_connect()
         // TODO: Log error.
         /* Close the socket, and try the next address entry
            immediately. */
-        fdev.cancel();
-        ::close(sock), sock = -1;
+        clear_socket();
         ainf = ainf->ai_next;
         continue;
 
