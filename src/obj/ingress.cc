@@ -52,7 +52,7 @@ TCPIngress::TCPIngress(Scheduler &sched,
                        AddressManager &addrmgr,
                        const std::string &host,
                        const std::string &srv)
-  : host(host), srv(srv), sock(-1), connected(false),
+  : host(host), srv(srv), sock(-1), connected(false), upout_ready(false),
     fdev(sched, [this](uint32_t evs) { descriptor_event(evs); }),
     rstev(sched, [this]() { restart_event(); }),
     addrev(addrmgr, [this](const struct addrinfo *p) { address_resolved(p); })
@@ -89,8 +89,8 @@ void TCPIngress::descriptor_event(uint32_t)
     connected = true;
   }
 
-  /* Try writing a packet. */
-  // TODO
+  upout_ready = true;
+  try_send();
 }
 
 void TCPIngress::clear_socket()
@@ -184,7 +184,79 @@ void TCPIngress::try_connect()
   } while (true);
 }
 
-void TCPIngress::submit(labelset_t, const void *data, std::size_t len)
+void TCPIngress::try_send()
 {
-  // TODO
+  assert(sock >= 0);
+  if (!upout_ready) {
+    /* We are not ready to send, so ask when we can. */
+    fdev.set(sock, EPOLLOUT);
+    return;
+  }
+
+  while (!streamers.empty()) {
+    /* Ask the first source to present some data to send in one or
+       more buffers. */
+    Streamer &src = **streamer_queue.begin();
+    iov.clear();
+    bool ok = src.describe(iov);
+    if (ok) {
+      /* Send some or all of this data. */
+      struct msghdr hdr;
+      hdr.msg_name = nullptr;
+      hdr.msg_namelen = 0;
+      hdr.msg_iov = iov.data();
+      hdr.msg_iovlen = iov.size();
+      hdr.msg_control = nullptr;
+      hdr.msg_flags = 0;
+      ssize_t done = ::sendmsg(sock, &hdr, MSG_DONTWAIT | MSG_NOSIGNAL);
+      upout_ready = false;
+      if (done < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+          /* We can't send any more.  Tell the source we're blocked.
+             Ensure we're told when we can send some more. */
+          src.consumed(0);
+          fdev.set(sock, EPOLLOUT);
+          return;
+        }
+
+        /* We failed to send the whole message. */
+        // TODO: Log error.
+
+        /* Ensure the source will restart its message. */
+        src.failed();
+
+        /* Close and discard the socket, and ensure we try again in a
+           while. */
+        clear_socket();
+        rstev.set(TimePeriod(30, TimePeriod::SECOND));
+        return;
+      }
+
+      /* Tell the source how much was consumed, and ask it whether
+         that's all.  If not, try again. */
+      bool all_done = src.consumed(done);
+      if (!all_done) continue;
+    }
+
+    /* Discard this source.  It will have to add itself if/when it has
+       more data. */
+    streamers.erase(&src);
+    streamer_queue.erase(streamer_queue.begin());
+  }
+}
+
+void TCPIngress::ready(Streamer &src)
+{
+  /* Ignore a source that we already know about. */
+  if (streamers.find(&src) != streamers.end()) return;
+
+  /* Include this source. */
+  bool was_empty = streamers.empty();
+  streamers.insert(&src);
+  streamer_queue.push_back(&src);
+
+  /* If the queue has just become non-empty, see if we can send
+     something, or find out when we can. */
+  if (was_empty && sock >= 0 && connected)
+    try_send();
 }

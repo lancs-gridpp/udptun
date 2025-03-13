@@ -34,63 +34,34 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ingress_included
-#define ingress_included
+#ifndef streamer_included
+#define streamer_included
 
-#include <netdb.h>
-
-#include <string>
 #include <vector>
-#include <list>
 
-#include "descriptor.hh"
-#include "timed.hh"
-#include "labels.hh"
-#include "addrevent.hh"
-#include "streamer.hh"
+struct iovec;
 
-class TCPIngress : public Ingress {
-  const std::string host;
-  const std::string srv;
-  int sock;
-  bool connected, upout_ready;
-
-  struct gaicb addrinfo;
-
-  DescriptorEvent fdev;
-  void descriptor_event(uint32_t);
-
-  TimedEvent rstev;
-  void restart_event();
-
-  const struct addrinfo *ainf;
-  AddressEvent addrev;
-  void address_resolved(const struct addrinfo *);
-  void clear_socket();
-  void try_connect();
-
-  /* Try to get data from one of our sources (the head of
-     'streamer_queue'), and send it.  Keep doing this until there's no
-     more to send, or we get EWOULDBLOCK.  If 'upout_ready' is false
-     on entry, set up a callbacl for when the socket is writable
-     instead.  'upout_ready' gets set to false after any attempt to
-     send a message.  */
-  void try_send();
-
-  /* We keep a queue of sources of data, and a set to prevent
-     duplicates. */
-  std::set<Streamer *> streamers;
-  std::list<Streamer *> streamer_queue;
-
-  /* We offer this to data sources when we're ready to send.  It is
-     cleared before each use, but retains its allocation. */
-  std::vector<struct iovec> iov;
-
+class Streamer {
 public:
-  TCPIngress(Scheduler &sched, AddressManager &,
-             const std::string &host, const std::string &srv);
-  ~TCPIngress();
-  void ready(Streamer &);
+  /* Poplate the vector with data to send.  Return false if there's
+     nothing to send (i.e., the sum of the vector sizes is zero).  The
+     implementation should provide at most one complete message on the
+     initial call, and the remaining parts of it on subsequent calls.
+     consumed() is called to report how much was consumed, and
+     therefore how much remains. */
+  virtual bool describe(std::vector<struct iovec> &) = 0;
+
+  /* Acknowledge that [done] bytes of the data provided by describe()
+     were sent.  Return true if that was all of it. */
+  virtual bool consumed(std::size_t done) = 0;
+
+  /* Be advised that an attempt to send failed, and so the message
+     should not be discarded, and resent from scratch. */
+  virtual void failed() { };
+};
+
+struct Ingress {
+  virtual void ready(Streamer &) = 0;
 };
 
 #endif
