@@ -50,9 +50,12 @@
 
 TCPIngress::TCPIngress(Scheduler &sched,
                        AddressManager &addrmgr,
-                       const std::string &host,
-                       const std::string &srv)
-  : host(host), srv(srv), sock(-1), connected(false), upout_ready(false),
+                       const YAML::Node &cfg)
+  : ipv4(cfg["ipv4"].as<bool>("true")),
+    ipv6(cfg["ipv6"].as<bool>("true")),
+    host(cfg["host"].as<std::string>("localhost")),
+    srv(cfg["port"].as<std::string>()),
+    sock(-1), connected(false), upout_ready(false),
     fdev(sched, [this](uint32_t evs) { descriptor_event(evs); }),
     rstev(sched, [this]() { restart_event(); }),
     addrev(addrmgr, [this](const struct addrinfo *p) { address_resolved(p); })

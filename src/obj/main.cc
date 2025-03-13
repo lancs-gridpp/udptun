@@ -54,7 +54,7 @@
 #include "config.hh"
 #include "periods.hh"
 #include "realtime.hh"
-#include "ingress.hh"
+#include "streamer.hh"
 #include "egress.hh"
 #include "destinations.hh"
 #include "exits.hh"
@@ -193,11 +193,17 @@ int main(int argc, const char *const *argv)
       if (root["ingress"]) {
         const auto &ingress_root = root["ingress"];
 
-        /* TODO: Create an index of named tunnel egresses.  Each will
+        /* Create an index of named tunnel egresses.  Each will
            form a stream connection to a tunnel ingress on another
            host.  Ingresses unused by any channel are quietly
            destroyed on exit from this block. */
-        //std::map<std::string, std::shared_ptr<Ingress>> ingress_index;
+        std::map<std::string, std::shared_ptr<Ingress>> ingress_index;
+        populate<Ingress>(ingress_index, "ingresses", ingress_root,
+                          [&sched, &addrmgr]
+                          (const std::string &inst,
+                           const YAML::Node &cfg) {
+                            return make_ingress(sched, addrmgr, inst, cfg);
+                          });
 
         /* TODO: Create an index of named channels.  Each channel
            identifies a tunnel ingress and a label set to send

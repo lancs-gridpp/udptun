@@ -34,65 +34,14 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ingress_included
-#define ingress_included
-
-#include <netdb.h>
-
-#include <string>
-#include <vector>
-#include <list>
-
-#include <yaml-cpp/yaml.h>
-
-#include "descriptor.hh"
-#include "timed.hh"
-#include "labels.hh"
-#include "addrevent.hh"
 #include "streamer.hh"
+#include "ingress.hh"
 
-class TCPIngress : public Ingress {
-  const bool ipv4, ipv6;
-  const std::string host;
-  const std::string srv;
-  int sock;
-  bool connected, upout_ready;
-
-  struct gaicb addrinfo;
-
-  DescriptorEvent fdev;
-  void descriptor_event(uint32_t);
-
-  TimedEvent rstev;
-  void restart_event();
-
-  const struct addrinfo *ainf;
-  AddressEvent addrev;
-  void address_resolved(const struct addrinfo *);
-  void clear_socket();
-  void try_connect();
-
-  /* Try to get data from one of our sources (the head of
-     'streamer_queue'), and send it.  Keep doing this until there's no
-     more to send, or we get EWOULDBLOCK.  If 'upout_ready' is false
-     on entry, set up a callbacl for when the socket is writable
-     instead.  'upout_ready' gets set to false after any attempt to
-     send a message.  */
-  void try_send();
-
-  /* We keep a queue of sources of data, and a set to prevent
-     duplicates. */
-  std::set<Streamer *> streamers;
-  std::list<Streamer *> streamer_queue;
-
-  /* We offer this to data sources when we're ready to send.  It is
-     cleared before each use, but retains its allocation. */
-  std::vector<struct iovec> iov;
-
-public:
-  TCPIngress(Scheduler &sched, AddressManager &, const YAML::Node &);
-  ~TCPIngress();
-  void ready(Streamer &);
-};
-
-#endif
+Ingress *make_ingress(Scheduler &sched, AddressManager &addrmgr,
+                      const std::string &ingress_name,
+                      const YAML::Node &cfg)
+{
+  if (cfg["tcp"])
+    return new TCPIngress(sched, addrmgr, cfg["cfg"]);
+  return nullptr;
+}

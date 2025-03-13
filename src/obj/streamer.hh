@@ -37,7 +37,10 @@
 #ifndef streamer_included
 #define streamer_included
 
+#include <string>
 #include <vector>
+
+#include <yaml-cpp/yaml.h>
 
 struct iovec;
 
@@ -63,5 +66,11 @@ public:
 struct Ingress {
   virtual void ready(Streamer &) = 0;
 };
+
+class Scheduler;
+class AddressManager;
+
+Ingress *make_ingress(Scheduler &, AddressManager &,
+                      const std::string &, const YAML::Node &);
 
 #endif
