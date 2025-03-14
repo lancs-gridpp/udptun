@@ -55,15 +55,18 @@ class Quota;
 class Destination;
 
 class Exit {
+  IdleEvent downstream_event;
+  IdleEvent upstream_event;
   PayloadQueue queue;
 
-  bool accept(Payload &&);
-  IdleEvent downstream_event;
   void downstream_ready();
-  bool okay;
+  void upstream_ready();
+  bool upstream_okay, downstream_okay;
 
   std::shared_ptr<Emitter> emitter;
   std::shared_ptr<Destination> destination;
+
+  void check();
 
 public:
   Exit(Scheduler &sched,

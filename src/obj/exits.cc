@@ -66,36 +66,45 @@ Exit::Exit(Scheduler &sched,
            const std::filesystem::path &dir,
            std::shared_ptr<Emitter> emitter,
            std::shared_ptr<Destination> dest)
-  : queue(100 * 1024, quota, dir,
-          std::bind(&Exit::accept, this, std::placeholders::_1)),
-    downstream_event(sched, std::bind(&Exit::downstream_ready, this)),
-    okay(false), emitter(emitter), destination(dest) { }
+  : downstream_event(sched, std::bind(&Exit::downstream_ready, this)),
+    upstream_event(sched, std::bind(&Exit::upstream_ready, this)),
+    queue(100 * 1024, quota, dir, std::bind(&IdleEvent::set, &upstream_event)),
+    upstream_okay(false), downstream_okay(false),
+    emitter(emitter), destination(dest) { }
 
 void Exit::activate()
 {
   emitter->activate();
 }
 
-bool Exit::accept(Payload &&pl)
+void Exit::check()
 {
-  /* If we're not ready to send, ensure that we will be notified when
-     ready, and indicate that we have not consumed the payload. */
-  if (!okay) {
+  if (!upstream_okay) return;
+  if (!downstream_okay) {
+    /* Make sure we're notified when ready to send. */
     emitter->notify(downstream_event);
-    return false;
+    return;
   }
+  Payload *payload = queue.peek();
+  if (!payload) return;
 
   /* Try to send the payload. */
-  auto rc = emitter->send(pl.base(), pl.size(), *destination.get(), 0);
-  if (rc == EWOULDBLOCK || rc == EAGAIN) {
-    okay = false;
+  auto rc = emitter->send(payload->base(),
+                          payload->size(), *destination.get(), 0);
+  switch (rc) {
+  case 0:
+    queue.consume();
+    // fall-through
+  case EWOULDBLOCK:
+#if EAGAIN != EWOULDBLOCK
+  case EAGAIN:
+#endif
+    downstream_okay = false;
     emitter->notify(downstream_event);
-    return false;
-  }
+    return;
 
-  /* Consume the payload. */
-  pl.clear();
-  return true;
+    // TODO: Other error codes?
+  }
 }
 
 Exit::~Exit()
@@ -110,6 +119,12 @@ void Exit::deliver(const void *base, std::size_t len)
 
 void Exit::downstream_ready()
 {
-  okay = true;
-  queue.awaken();
+  downstream_okay = true;
+  check();
+}
+
+void Exit::upstream_ready()
+{
+  upstream_okay = true;
+  check();
 }

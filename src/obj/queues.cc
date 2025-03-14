@@ -47,7 +47,7 @@ PayloadQueue::PayloadQueue(std::size_t max_mem, Quota &quota,
                            user_t user)
   : dir(dir), max_mem(max_mem), quota(quota),
     quota_user(std::bind(&PayloadQueue::discard_file, this)),
-    sz_mem(0), user(user), user_ready(false)
+    sz_mem(0), user(user), disappointed(true)
 {
   /* Get the list of matching queue files, and sum up their sizes. */
   std::filesystem::create_directory(dir);
@@ -144,28 +144,29 @@ void PayloadQueue::discard_file()
   quota.decrease(quota_user, sz);
 }
 
-void PayloadQueue::attempt_delivery()
+Payload *PayloadQueue::peek()
 {
-  assert(user_ready);
-
-  /* Offer items from the in-memory queue until refused. */
-  for ( ; ; ) {
-    /* If the in-memory queue is empty, load and discard one of the
-       files. */
-    if (queue.empty() && !load_head_file())
-      return;
-    assert(!queue.empty());
-
-    auto pos = queue.begin();
-    if (user(std::move(*pos))) {
-      queue.erase(pos);
-      continue;
-    }
-
-    /* The user is not accepting any more payloads for now. */
-    user_ready = false;
-    break;
+  /* Provide a pointer to the head of the queue if present.  If not,
+     record that the user would like to be notified when data's
+     ready, and then return null. */
+  if (queue.empty() && !load_head_file()) {
+    /* The in-memory queue is empty, and we failed to populate it from
+       disc. */
+    disappointed = true;
+    return nullptr;
   }
+
+  auto hd = queue.begin();
+  assert(hd != queue.end());
+  return &*hd;
+}
+
+void PayloadQueue::consume()
+{
+  /* Remove the head element if present. */
+  auto pos = queue.begin();
+  if (pos != queue.end())
+      queue.erase(pos);
 }
 
 void PayloadQueue::push(const void *base, std::size_t len)
@@ -177,8 +178,10 @@ void PayloadQueue::push(const void *base, std::size_t len)
     sz_mem += len;
 
     /* Let the user know we have a queue entry available. */
-    if (was_empty && user_ready)
-      attempt_delivery();
+    if (was_empty && disappointed) {
+      disappointed = false;
+      user();
+    }
     return;
   }
 
@@ -202,14 +205,6 @@ void PayloadQueue::push(const void *base, std::size_t len)
   if (sz_out >= max_mem)
     out.close();
   quota.increase(quota_user, len + 2);
-}
-
-void PayloadQueue::awaken()
-{
-  /* The user is ready to accept another payload.  Record this
-     condition, and try to provide one. */
-  user_ready = true;
-  attempt_delivery();
 }
 
 PayloadQueue::~PayloadQueue()

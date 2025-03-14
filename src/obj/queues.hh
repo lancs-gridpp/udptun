@@ -48,7 +48,7 @@
 class Payload;
 
 struct PayloadQueue {
-  typedef std::function<bool(Payload &&)> user_t;
+  typedef std::function<void()> user_t;
 
 private:
   const std::filesystem::path dir;
@@ -75,9 +75,7 @@ private:
      file, and return true; otherwise, return false. */
   bool load_head_file();
 
-  bool user_ready;
-
-  void attempt_delivery();
+  bool disappointed;
 
   /* Called by the quota manager to discard a file. */
   void discard_file();
@@ -89,8 +87,11 @@ public:
   /* Add another payload to the queue. */
   void push(const void *, std::size_t);
 
-  /* Acknowledge that the user is ready to receive again. */
-  void awaken();
+  /* Examine the head of the queue, or return null. */
+  Payload *peek();
+
+  /* Consume the head of the queue. */
+  void consume();
 
   ~PayloadQueue();
 };

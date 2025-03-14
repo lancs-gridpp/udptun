@@ -42,22 +42,27 @@
 
 #include "streamer.hh"
 #include "queues.hh"
+#include "idle.hh"
 
+class Scheduler;
 class Payload;
 class Quota;
 
 class Channel : Streamer {
   Ingress &ingress;
+  IdleEvent queue_event;
   PayloadQueue queue;
-  bool accept(Payload &&);
+  void queue_ready();
+
+  // Streamer interface
   bool describe(std::vector<struct iovec> &);
   bool consumed(std::size_t done);
   void failed();
 
 public:
-  Channel(Ingress &, Quota &, const std::filesystem::path &);
+  Channel(Scheduler &, Ingress &, Quota &, const std::filesystem::path &);
   ~Channel();
-  void submit(Payload &&);
+  void submit(const void *, std::size_t);
 };
 
 

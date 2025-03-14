@@ -37,24 +37,21 @@
 #include "channels.hh"
 #include "quotas.hh"
 #include "payloads.hh"
+#include "scheduling.hh"
 
-Channel::Channel(Ingress &ingress,
+Channel::Channel(Scheduler &sched,
+                 Ingress &ingress,
                  Quota &quota,
                  const std::filesystem::path &dir)
   : ingress(ingress),
-    queue(100 * 1024, quota, dir,
-          std::bind(&Channel::accept, this, std::placeholders::_1))
+    queue_event(sched, std::bind(&Channel::queue_ready, this)),
+    queue(100 * 1024, quota, dir, std::bind(&IdleEvent::set, queue_event))
 {
   // TODO
 }
 
 Channel::~Channel()
 {
-}
-
-bool Channel::accept(Payload &&)
-{
-  // TODO
 }
 
 bool Channel::describe(std::vector<struct iovec> &)
@@ -70,4 +67,14 @@ bool Channel::consumed(std::size_t done)
 void Channel::failed()
 {
   // TODO
+}
+
+void Channel::queue_ready()
+{
+  // TODO
+}
+
+void Channel::submit(const void *base, std::size_t len)
+{
+  queue.push(base, len);
 }
