@@ -34,42 +34,44 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef channels_included
-#define channels_included
+#include <sys/uio.h>
 
-#include <string>
-#include <filesystem>
+#include <cassert>
 
-#include "streamer.hh"
-#include "queues.hh"
-#include "idle.hh"
+#include <algorithm>
+
 #include "labels.hh"
 
-class Scheduler;
-class Payload;
-class Quota;
+bool labels_to_bytes(labelset_t labels, unsigned char *buf,
+                     std::size_t done, std::size_t pos,
+                     std::vector<struct iovec> &vec)
+{
+  if (done >= pos + MAX_LABEL_BYTES) return false;
+  auto m = done > pos ? pos + MAX_LABEL_BYTES - done : MAX_LABEL_BYTES;
+  assert(m >= 1);
+  for (unsigned i = MAX_LABEL_BYTES - m; i < MAX_LABEL_BYTES; i++)
+    buf[i] = (labels >> (i * 8)) & 0xffu;
+  struct iovec v = {
+    .iov_base = buf + (MAX_LABEL_BYTES - m),
+    .iov_len = m,
+  };
+  vec.push_back(v);
+  return true;
+}
 
-class Channel : Streamer {
-  Ingress &ingress;
-  const labelset_t labels;
-  IdleEvent queue_event;
-  PayloadQueue queue;
-  Payload *current;
-  unsigned char channels[MAX_LABEL_BYTES], lenword[2];
-  std::size_t done;
-  void queue_ready();
-
-  // Streamer interface
-  bool describe(std::vector<struct iovec> &);
-  bool consumed(std::size_t done);
-  void failed();
-
-public:
-  Channel(Scheduler &, Ingress &, labelset_t,
-          Quota &, const std::filesystem::path &);
-  ~Channel();
-  void submit(const void *, std::size_t);
-};
-
-
-#endif
+bool length_to_bytes(unsigned len, unsigned char *buf,
+                     std::size_t done, std::size_t pos,
+                     std::vector<struct iovec> &vec)
+{
+  if (done >= pos + MAX_LENGTH_BYTES) return false;
+  auto m = done > pos ? pos + MAX_LENGTH_BYTES - done : MAX_LENGTH_BYTES;
+  assert(m >= 1);
+  for (unsigned i = MAX_LENGTH_BYTES - m; i < MAX_LENGTH_BYTES; i++)
+    buf[i] = (len >> ((MAX_LENGTH_BYTES - 1 - i) * 8)) & 0xffu;
+  struct iovec v = {
+    .iov_base = buf + (MAX_LENGTH_BYTES - m),
+    .iov_len = m,
+  };
+  vec.push_back(v);
+  return true;
+}

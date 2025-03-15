@@ -34,18 +34,23 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/uio.h>
+
+#include <cassert>
+
 #include "channels.hh"
 #include "quotas.hh"
 #include "payloads.hh"
 #include "scheduling.hh"
 
 Channel::Channel(Scheduler &sched,
-                 Ingress &ingress,
+                 Ingress &ingress, labelset_t labels,
                  Quota &quota,
                  const std::filesystem::path &dir)
-  : ingress(ingress),
+  : ingress(ingress), labels(labels),
     queue_event(sched, std::bind(&Channel::queue_ready, this)),
-    queue(100 * 1024, quota, dir, std::bind(&IdleEvent::set, queue_event))
+    queue(100 * 1024, quota, dir, std::bind(&IdleEvent::set, queue_event)),
+    current(nullptr), done(0)
 {
   // TODO
 }
@@ -54,24 +59,46 @@ Channel::~Channel()
 {
 }
 
-bool Channel::describe(std::vector<struct iovec> &)
+bool Channel::describe(std::vector<struct iovec> &iov)
 {
-  // TODO
+  if (current == nullptr) {
+    current = queue.peek();
+    if (!current) return false;
+    done = 0;
+  }
+  labels_to_bytes(labels, channels, done, 0, iov);
+  // TODO: Assert size within two bytes.
+  length_to_bytes(current->size(), lenword, done, MAX_LABEL_BYTES, iov);
+  auto m = done > MAX_LABEL_BYTES + MAX_LENGTH_BYTES
+    ? MAX_LABEL_BYTES + MAX_LENGTH_BYTES + current->size() - done : current->size();
+  struct iovec v = {
+    .iov_base = (void *) (current->base() + (current->size() - m)),
+    .iov_len = m,
+  };
+  iov.push_back(v);
+  return true;
 }
 
 bool Channel::consumed(std::size_t done)
 {
-  // TODO
+  assert(current);
+  this->done += done;
+  if (this->done == MAX_LABEL_BYTES + MAX_LENGTH_BYTES + current->size()) {
+    queue.consume();
+    current = nullptr;
+    return true;
+  }
+  return false;
 }
 
 void Channel::failed()
 {
-  // TODO
+  current = nullptr;
 }
 
 void Channel::queue_ready()
 {
-  // TODO
+  ingress.ready(*this);
 }
 
 void Channel::submit(const void *base, std::size_t len)

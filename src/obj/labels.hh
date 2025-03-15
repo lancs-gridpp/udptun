@@ -40,9 +40,21 @@
 #include <cstdint>
 
 #include <limits>
+#include <vector>
 
-typedef uintmax_t labelset_t;
-constexpr unsigned MAX_LABELS = std::numeric_limits<labelset_t>::digits;
-constexpr unsigned MAX_LABEL_BYTES = (MAX_LABELS + 7) / 8;
+typedef uint_fast64_t labelset_t;
+constexpr unsigned MAX_LABEL_BYTES = 8;
+constexpr unsigned MAX_LABELS = MAX_LABEL_BYTES * 8;
+
+constexpr unsigned MAX_LENGTH_BYTES = 2;
+
+struct iovec;
+
+bool labels_to_bytes(labelset_t, unsigned char *,
+                     std::size_t done, std::size_t pos,
+                     std::vector<struct iovec> &);
+bool length_to_bytes(unsigned len, unsigned char *,
+                     std::size_t done, std::size_t pos,
+                     std::vector<struct iovec> &);
 
 #endif
