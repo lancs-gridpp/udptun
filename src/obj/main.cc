@@ -48,6 +48,7 @@
 #include <memory>
 #include <iostream>
 #include <system_error>
+#include <stdexcept>
 
 #include <yaml-cpp/yaml.h>
 
@@ -66,6 +67,7 @@
 #include "addressing.hh"
 #include "signaling.hh"
 #include "channels.hh"
+#include "formatting.hh"
 
 static sig_atomic_t reload = 0, quit = 0;
 
@@ -211,7 +213,32 @@ int main(int argc, const char *const *argv)
            datagrams through.  It also maintains a named message
            queue.  Channels unused by any absorber are quietly
            destroyed on exit from this block. */
-        //std::map<std::string, std::shared_ptr<Channel>> channel_index;
+        std::map<std::string, std::shared_ptr<Channel>> channel_index;
+        const auto &channels_root = ingress_root["channels"];
+        populate<Channel>(channel_index, "ingress channels", channels_root,
+                          [&sched, &ingress_index, &quota, &ingress_qdir]
+                          (const std::string &inst,
+                           const YAML::Node &cfg) {
+                            auto tun = cfg["tunnel"].as<std::string>();
+                            auto pos = ingress_index.find(tun);
+                            if (pos == ingress_index.end())
+                              throw std::runtime_error
+                                (sformat("ingress channel %s has no tunnel %s",
+                                         inst.c_str(), tun.c_str()));
+
+                            /* Get the label set by OR-ing the label
+                               numbers. */
+                            labelset_t labels = 0;
+                            for (auto iter = cfg["labels"].begin();
+                                 iter != cfg["labels"].end(); iter++) {
+                              auto lbl = iter->as<unsigned>();
+                              labels |= 1u << lbl;
+                            }
+
+                            return new Channel(sched, pos->second,
+                                               labels, quota,
+                                               ingress_qdir / inst);
+                          });
 
         /* TODO: Populate the table of absorbers.  Each will create a
            datagram socket, and anything it receives will be sent to

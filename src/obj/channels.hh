@@ -38,6 +38,7 @@
 #define channels_included
 
 #include <string>
+#include <memory>
 #include <filesystem>
 
 #include "streamer.hh"
@@ -50,7 +51,7 @@ class Payload;
 class Quota;
 
 class Channel : Streamer {
-  Ingress &ingress;
+  std::shared_ptr<Ingress> ingress;
   const labelset_t labels;
   IdleEvent queue_event;
   PayloadQueue queue;
@@ -65,7 +66,7 @@ class Channel : Streamer {
   void failed();
 
 public:
-  Channel(Scheduler &, Ingress &, labelset_t,
+  Channel(Scheduler &, std::shared_ptr<Ingress>, labelset_t,
           Quota &, const std::filesystem::path &);
   ~Channel();
   void submit(const void *, std::size_t);

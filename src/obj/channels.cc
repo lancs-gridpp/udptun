@@ -44,7 +44,7 @@
 #include "scheduling.hh"
 
 Channel::Channel(Scheduler &sched,
-                 Ingress &ingress, labelset_t labels,
+                 std::shared_ptr<Ingress> ingress, labelset_t labels,
                  Quota &quota,
                  const std::filesystem::path &dir)
   : ingress(ingress), labels(labels),
@@ -98,7 +98,7 @@ void Channel::failed()
 
 void Channel::queue_ready()
 {
-  ingress.ready(*this);
+  ingress->ready(*this);
 }
 
 void Channel::submit(const void *base, std::size_t len)
