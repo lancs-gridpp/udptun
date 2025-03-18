@@ -208,9 +208,9 @@ int main(int argc, const char *const *argv)
                             return make_ingress(sched, addrmgr, inst, cfg);
                           });
 
-        /* TODO: Create an index of named channels.  Each channel
-           identifies a tunnel ingress and a label set to send
-           datagrams through.  It also maintains a named message
+        /* Create an index of named channels.  Each channel identifies
+           a tunnel ingress to send datagrams through, and label set
+           to send them with.  It also maintains a named message
            queue.  Channels unused by any absorber are quietly
            destroyed on exit from this block. */
         std::map<std::string, std::shared_ptr<Channel>> channel_index;
