@@ -61,7 +61,8 @@
 #include "exits.hh"
 #include "idle.hh"
 #include "scheduling.hh"
-#include "idle.hh"
+#include "emitters.hh"
+#include "absorbers.hh"
 #include "timed.hh"
 #include "quotas.hh"
 #include "addressing.hh"
@@ -190,7 +191,7 @@ int main(int argc, const char *const *argv)
     /* Prepare to create indices of egresses and absorber.  These are
        retained within a reset iteration, but discarded before the
        next. */
-    //std::vector<std::shared_ptr<Absorber>> absorber_set;
+    std::map<std::string, std::shared_ptr<Absorber>> absorber_index;
     std::map<std::string, std::shared_ptr<Egress>> egress_index;
     {
       if (root["ingress"]) {
@@ -214,7 +215,6 @@ int main(int argc, const char *const *argv)
            queue.  Channels unused by any absorber are quietly
            destroyed on exit from this block. */
         std::map<std::string, std::shared_ptr<Channel>> channel_index;
-        const auto &channels_root = ingress_root["channels"];
         populate<Channel>(channel_index, "channels", ingress_root,
                           [&sched, &ingress_index, &quota, &ingress_qdir]
                           (const std::string &inst,
@@ -239,10 +239,23 @@ int main(int argc, const char *const *argv)
                                                labels, quota,
                                                ingress_qdir / inst);
                           });
+        auto find_channel =
+          [&cidx = channel_index](const std::string &cn) {
+            auto pos = cidx.find(cn);
+            if (pos != cidx.end())
+              return std::shared_ptr<Channel>();
+            return pos->second;
+          };
 
-        /* TODO: Populate the table of absorbers.  Each will create a
+        /* Populate the table of absorbers.  Each will create a
            datagram socket, and anything it receives will be sent to
-           each of its channels, which it retains a reference to. */
+           each of its channels, which it retains references to. */
+        populate<Absorber>(absorber_index, "sockets", ingress_root,
+                           [&sched, &find_channel]
+                           (const std::string &inst,
+                            const YAML::Node &cfg) {
+                             return make_absorber(sched, inst, cfg, find_channel);
+                           });
       }
 
       if (root["egress"]) {
@@ -302,7 +315,8 @@ int main(int argc, const char *const *argv)
     /* Activate all absorbers and their dependencies.  This creates
        the necessary sockets, and enables quota enforcement on the
        queues. */
-    // TODO
+    for (auto &absorber : absorber_index)
+      absorber.second->activate();
 
     more = true;
     while (more) {

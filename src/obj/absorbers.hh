@@ -37,4 +37,43 @@
 #ifndef absorbers_included
 #define absorbers_included
 
+#include <string>
+#include <functional>
+#include <memory>
+#include <set>
+
+#include <yaml-cpp/yaml.h>
+
+#include "descriptor.hh"
+
+struct Absorber {
+  virtual void activate() = 0;
+};
+
+class Channel;
+
+class UDPAbsorber : public Absorber {
+  const bool ipv4, ipv6;
+  const std::string host, srv;
+  const std::set<std::shared_ptr<Channel>> channels;
+
+  int sock;
+  DescriptorEvent sockev;
+  void sock_ready(uint32_t events);
+  unsigned char buf[65536];
+
+public:
+  UDPAbsorber(Scheduler &, const YAML::Node &,
+              const std::set<std::shared_ptr<Channel>> &);
+  ~UDPAbsorber();
+
+  void activate();
+};
+
+typedef
+std::function<std::shared_ptr<Channel>(const std::string &)> channel_index_t;
+
+Absorber *make_absorber(Scheduler &, const std::string &, const YAML::Node &,
+                        channel_index_t);
+
 #endif
