@@ -25,18 +25,18 @@ A minimal egress-side configuration could be:
 egress:
   destinations:
     detailed-dest:
-	  port: 6789
+      port: 6789
   sockets:
     - udp:
-	    port: 8000
+        port: 8000
       queues:
-	    detailed: detailed-dest
+        detailed: detailed-dest
   tunnels:
     main:
-	  tcp:
-	    port: 9992
-	  channels:
-	    0: [ detailed ]
+      tcp:
+        port: 9992
+      channels:
+        0: [ detailed ]
 ```
 
 (The strings `detailed` and `detailed-dest` are user-defined.
@@ -55,18 +55,18 @@ A minimal ingress-side configuration could be:
 ingress:
   tunnels:
     monitor:
-	  tcp:
-	    host: monitor.example.com
-		port: 9992
+      tcp:
+        host: monitor.example.com
+        port: 9992
   channels:
     detailed:
-	  tunnel: monitor
-	  labels: [ 0 ]
+      tunnel: monitor
+      labels: [ 0 ]
   sockets:
     main:
-	  udp:
-	    port: 9500
-	  channels: [ detailed ]
+      udp:
+        port: 9500
+      channels: [ detailed ]
 ```
 
 (`main`, `detailed` and `monitor` are used-defined.
