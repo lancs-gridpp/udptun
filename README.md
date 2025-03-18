@@ -32,13 +32,16 @@ egress:
       queues:
 	    detailed: detailed-dest
   tunnels:
-    - tcp:
+    main:
+	  tcp:
 	    port: 9992
 	  channels:
 	    0: [ detailed ]
 ```
 
-The strings `detailed` and `detailed-dest` are user-defined.
+(The strings `detailed` and `detailed-dest` are user-defined.
+Tunnel names are used only for logging.)
+
 The example creates a TCP server socket on `localhost:9992`, and accepts connections on it.
 Encapsulated datagrams are received on these connections, and decapsulated.
 Any labelled with `0` are then passed through a queue called `egress/detailed`.
@@ -60,12 +63,15 @@ ingress:
 	  tunnel: monitor
 	  labels: [ 0 ]
   sockets:
-    - udp:
+    main:
+	  udp:
 	    port: 9500
 	  channels: [ detailed ]
 ```
 
-`detailed` and `monitor` are used-defined.
+(`main`, `detailed` and `monitor` are used-defined.
+Socket names are used only for logging.)
+
 This example creates a UDP socket on `localhost:9500`, and opens a TCP connection to `monitor.example.com:9992`.
 Everything datagram received on the UDP socket is queued on `ingress/detailed`, and then sent over the TCP socket encapsulated with a set of one label 0.
 
