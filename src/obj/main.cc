@@ -201,7 +201,7 @@ int main(int argc, const char *const *argv)
            host.  Ingresses unused by any channel are quietly
            destroyed on exit from this block. */
         std::map<std::string, std::shared_ptr<Ingress>> ingress_index;
-        populate<Ingress>(ingress_index, "ingresses", ingress_root,
+        populate<Ingress>(ingress_index, "tunnels", ingress_root,
                           [&sched, &addrmgr]
                           (const std::string &inst,
                            const YAML::Node &cfg) {
@@ -215,7 +215,7 @@ int main(int argc, const char *const *argv)
            destroyed on exit from this block. */
         std::map<std::string, std::shared_ptr<Channel>> channel_index;
         const auto &channels_root = ingress_root["channels"];
-        populate<Channel>(channel_index, "ingress channels", channels_root,
+        populate<Channel>(channel_index, "channels", ingress_root,
                           [&sched, &ingress_index, &quota, &ingress_qdir]
                           (const std::string &inst,
                            const YAML::Node &cfg) {
