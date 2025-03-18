@@ -270,6 +270,12 @@ int main(int argc, const char *const *argv)
                                  const YAML::Node &cfg) {
                                 return new Destination(cfg);
                               });
+        auto find_dest = [&didx = destinations](const std::string &dname) {
+          auto pos = didx.find(dname);
+          if (pos == didx.end())
+            return std::shared_ptr<Destination>();
+          return pos->second;
+        };
 
         /* Create an index of named exits, and the emitters they
            share.  Each exit uses exactly one emitter, and keeps a
@@ -283,14 +289,7 @@ int main(int argc, const char *const *argv)
           const auto &socket_root = egress_root["sockets"];
           for (auto iter = egress_root["sockets"].begin();
                iter != egress_root["sockets"].end(); iter++) {
-            make_exits(sched, quota, egress_qdir, *iter,
-                       [&dmap = destinations](const std::string &dname) {
-                         auto pos = dmap.find(dname);
-                         if (pos == dmap.end())
-                           return std::shared_ptr<Destination>();
-                         return pos->second;
-                       },
-                       exit_index);
+            make_exits(sched, quota, egress_qdir, *iter, find_dest, exit_index);
           }
         }
 
