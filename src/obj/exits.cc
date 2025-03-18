@@ -49,8 +49,8 @@ void make_exits(Scheduler &sched, Quota &quota,
                 std::map<std::string, std::shared_ptr<Exit>> &out)
 {
   auto emitter = std::make_shared<Emitter>(sched, cfg["udp"]);
-  const auto end = cfg["names"].end();
-  for (auto iter = cfg["names"].begin(); iter != end; iter++) {
+  const auto end = cfg["queues"].end();
+  for (auto iter = cfg["queues"].begin(); iter != end; iter++) {
     auto name = iter->first.as<std::string>();
     auto dest_name = iter->second.as<std::string>();
     auto dest = dests(dest_name);
