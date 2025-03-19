@@ -71,6 +71,7 @@ public:
           Scheduler &, std::shared_ptr<Ingress>, labelset_t,
           Quota &, const std::filesystem::path &);
   ~Channel();
+  void activate();
   void submit(const void *, std::size_t);
 };
 

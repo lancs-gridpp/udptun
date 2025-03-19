@@ -61,6 +61,11 @@ Channel::~Channel()
 {
 }
 
+void Channel::activate()
+{
+  ingress->activate();
+}
+
 bool Channel::describe(std::vector<struct iovec> &iov)
 {
   if (current == nullptr) {

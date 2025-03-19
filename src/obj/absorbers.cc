@@ -111,6 +111,9 @@ void UDPAbsorber::activate()
 
     this->sock = sock;
     sockev.set(this->sock, EPOLLIN);
+
+    for (auto &c : channels)
+      c->activate();
     return;
   }
 

@@ -94,6 +94,7 @@ public:
   TCPIngress(const std::string &name,
              Scheduler &sched, AddressManager &, const YAML::Node &);
   ~TCPIngress();
+  void activate();
   void ready(Streamer &);
 };
 

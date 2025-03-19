@@ -71,6 +71,13 @@ TCPIngress::~TCPIngress()
     ::close(sock);
 }
 
+void TCPIngress::activate()
+{
+  if (sock >= 0) return;
+
+  // restart_event();
+}
+
 void TCPIngress::descriptor_event(uint32_t)
 {
   /* The socket has become writable.  Is the connection operation just
