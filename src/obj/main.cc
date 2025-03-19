@@ -69,6 +69,7 @@
 #include "signaling.hh"
 #include "channels.hh"
 #include "formatting.hh"
+#include "fnexp.hh"
 
 static sig_atomic_t reload = 0, quit = 0;
 
@@ -177,8 +178,17 @@ int main(int argc, const char *const *argv)
     std::cerr << "reading config" << std::endl;
     YAML::Node root = config.get();
     std::filesystem::path queuedir("/var/spool/udptun");
-    if (root["state"] && root["state"]["queues"])
-      queuedir = root["state"]["queues"].as<std::string>();
+    if (root["queues"]) {
+      const auto &queues_root = root["queues"];
+      if (queues_root["path"]) {
+        auto raw = queues_root["path"].as<std::string>();
+        auto opts = expand_filename(raw);
+        if (opts.size() != 1)
+          throw std::runtime_error(sformat("bad expansion for queue path: %s",
+                                           raw.c_str()));
+        queuedir = opts[0];
+      }
+    }
 
     /* Set the quota from configuration. */
     // TODO
