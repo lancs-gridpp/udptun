@@ -43,13 +43,15 @@
 #include "payloads.hh"
 #include "scheduling.hh"
 
-Channel::Channel(Scheduler &sched,
+Channel::Channel(const std::string &name,
+                 Scheduler &sched,
                  std::shared_ptr<Ingress> ingress, labelset_t labels,
                  Quota &quota,
                  const std::filesystem::path &dir)
-  : ingress(ingress), labels(labels),
+  : name(name), ingress(ingress), labels(labels),
     queue_event(sched, std::bind(&Channel::queue_ready, this)),
-    queue(100 * 1024, quota, dir, std::bind(&IdleEvent::set, queue_event)),
+    queue(std::string("ingress:") + name,
+          100 * 1024, quota, dir, std::bind(&IdleEvent::set, queue_event)),
     current(nullptr), done(0)
 {
   // TODO

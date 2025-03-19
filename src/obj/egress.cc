@@ -201,8 +201,9 @@ void TCPEgress::Connection::handle_fd(uint32_t)
     ;
 }
 
-TCPEgress::TCPEgress(Scheduler &sched, const YAML::Node &cfg)
-  : sched(sched),
+TCPEgress::TCPEgress(const std::string &name,
+                     Scheduler &sched, const YAML::Node &cfg)
+  : name(name), sched(sched),
     idev(sched, std::bind(&TCPEgress::flush, this)),
     ipv4(cfg["ipv4"].as<bool>("true")),
     ipv6(cfg["ipv6"].as<bool>("true")),
@@ -271,7 +272,7 @@ Egress *make_egress(Scheduler &sched,
 {
   Egress *result = nullptr;
   if (cfg["tcp"]) {
-    result = new TCPEgress(sched, cfg["tcp"]);
+    result = new TCPEgress(egress_name, sched, cfg["tcp"]);
   }
   if (result) {
     if (cfg["channels"]) {

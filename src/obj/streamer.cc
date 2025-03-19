@@ -44,6 +44,6 @@ Ingress *make_ingress(Scheduler &sched, AddressManager &addrmgr,
                       const YAML::Node &cfg)
 {
   if (cfg["tcp"])
-    return new TCPIngress(sched, addrmgr, cfg["tcp"]);
+    return new TCPIngress(ingress_name, sched, addrmgr, cfg["tcp"]);
   return nullptr;
 }

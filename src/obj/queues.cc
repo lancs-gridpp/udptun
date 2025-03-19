@@ -42,10 +42,11 @@
 #include "payloads.hh"
 #include "queues.hh"
 
-PayloadQueue::PayloadQueue(std::size_t max_mem, Quota &quota,
+PayloadQueue::PayloadQueue(const std::string &name,
+                           std::size_t max_mem, Quota &quota,
                            const std::filesystem::path &dir,
                            user_t user)
-  : dir(dir), max_mem(max_mem), quota(quota),
+  : name(name), dir(dir), max_mem(max_mem), quota(quota),
     quota_user(std::bind(&PayloadQueue::discard_file, this)),
     sz_mem(0), user(user), disappointed(true)
 {

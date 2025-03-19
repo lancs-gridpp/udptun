@@ -57,18 +57,22 @@ void make_exits(Scheduler &sched, Quota &quota,
     if (!dest)
       throw std::runtime_error(sformat("unknown destination %s for exit %s",
                                        dest_name.c_str(), name.c_str()));
-    out[name] = std::make_shared<Exit>(sched, quota, dir / name, emitter, dest);
+    out[name] =
+      std::make_shared<Exit>(name, sched, quota, dir / name, emitter, dest);
   }
 }
 
-Exit::Exit(Scheduler &sched,
+Exit::Exit(const std::string &name,
+           Scheduler &sched,
            Quota &quota,
            const std::filesystem::path &dir,
            std::shared_ptr<Emitter> emitter,
            std::shared_ptr<Destination> dest)
-  : downstream_event(sched, std::bind(&Exit::downstream_ready, this)),
+  : name(name),
+    downstream_event(sched, std::bind(&Exit::downstream_ready, this)),
     upstream_event(sched, std::bind(&Exit::upstream_ready, this)),
-    queue(100 * 1024, quota, dir, std::bind(&IdleEvent::set, &upstream_event)),
+    queue(std::string("egress:") + name,
+          100 * 1024, quota, dir, std::bind(&IdleEvent::set, &upstream_event)),
     upstream_okay(false), downstream_okay(false),
     emitter(emitter), destination(dest) { }
 

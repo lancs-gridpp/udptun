@@ -55,6 +55,7 @@ class Quota;
 class Destination;
 
 class Exit {
+  const std::string name;
   IdleEvent downstream_event;
   IdleEvent upstream_event;
   PayloadQueue queue;
@@ -69,7 +70,8 @@ class Exit {
   void check();
 
 public:
-  Exit(Scheduler &sched,
+  Exit(const std::string &name,
+       Scheduler &sched,
        Quota &quota,
        const std::filesystem::path &dir,
        std::shared_ptr<Emitter>,

@@ -54,6 +54,7 @@ struct Absorber {
 class Channel;
 
 class UDPAbsorber : public Absorber {
+  const std::string name;
   const bool ipv4, ipv6;
   const std::string host, srv;
   const std::set<std::shared_ptr<Channel>> channels;
@@ -64,7 +65,8 @@ class UDPAbsorber : public Absorber {
   unsigned char buf[65536];
 
 public:
-  UDPAbsorber(Scheduler &, const YAML::Node &,
+  UDPAbsorber(const std::string &name,
+              Scheduler &, const YAML::Node &,
               const std::set<std::shared_ptr<Channel>> &);
   ~UDPAbsorber();
 

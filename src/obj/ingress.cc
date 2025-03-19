@@ -48,10 +48,12 @@
 
 #include "ingress.hh"
 
-TCPIngress::TCPIngress(Scheduler &sched,
+TCPIngress::TCPIngress(const std::string &name,
+                       Scheduler &sched,
                        AddressManager &addrmgr,
                        const YAML::Node &cfg)
-  : ipv4(cfg["ipv4"].as<bool>("true")),
+  : name(name),
+    ipv4(cfg["ipv4"].as<bool>("true")),
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>()),

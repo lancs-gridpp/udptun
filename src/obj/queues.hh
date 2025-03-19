@@ -51,6 +51,7 @@ struct PayloadQueue {
   typedef std::function<void()> user_t;
 
 private:
+  const std::string name;
   const std::filesystem::path dir;
   const std::size_t max_mem;
   Quota &quota;
@@ -81,7 +82,7 @@ private:
   void discard_file();
 
 public:
-  PayloadQueue(std::size_t max_mem, Quota &,
+  PayloadQueue(const std::string &name, std::size_t max_mem, Quota &,
                const std::filesystem::path &dir, user_t);
 
   /* Add another payload to the queue. */

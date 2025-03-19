@@ -39,12 +39,15 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#include <string>
 #include <map>
 #include <vector>
 
 #include <yaml-cpp/yaml.h>
 
 class Destination {
+  const std::string name;
+
   class Key {
     const int family, protocol;
 
@@ -68,7 +71,7 @@ class Destination {
   std::map<Key, Value> options;
 
 public:
-  Destination(const YAML::Node &cfg);
+  Destination(const std::string &name, const YAML::Node &cfg);
 
   /* Match the address family and protocol of the given socket to a
      resolved socket address, and send the data.  Return ENOSYS if

@@ -91,6 +91,7 @@ class TCPEgress : public Egress {
   friend class Connection;
   std::list<Connection> conns;
 
+  const std::string name;
   Scheduler &sched;
   IdleEvent idev;
   const bool ipv4, ipv6;
@@ -100,7 +101,7 @@ class TCPEgress : public Egress {
   void flush();
 
 public:
-  TCPEgress(Scheduler &sched, const YAML::Node &cfg);
+  TCPEgress(const std::string &name, Scheduler &sched, const YAML::Node &cfg);
   void activate();
   void channel(unsigned, std::shared_ptr<Exit> dst);
 };

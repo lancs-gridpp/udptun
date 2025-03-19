@@ -245,7 +245,7 @@ int main(int argc, const char *const *argv)
                               labels |= 1u << lbl;
                             }
 
-                            return new Channel(sched, pos->second,
+                            return new Channel(inst, sched, pos->second,
                                                labels, quota,
                                                ingress_qdir / inst);
                           });
@@ -278,7 +278,7 @@ int main(int argc, const char *const *argv)
         populate<Destination>(destinations, "destinations", egress_root,
                               [](const std::string &inst,
                                  const YAML::Node &cfg) {
-                                return new Destination(cfg);
+                                return new Destination(inst, cfg);
                               });
         auto find_dest = [&didx = destinations](const std::string &dname) {
           auto pos = didx.find(dname);

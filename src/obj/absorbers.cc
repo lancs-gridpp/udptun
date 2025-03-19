@@ -50,9 +50,11 @@
 
 Absorber::~Absorber() { }
 
-UDPAbsorber::UDPAbsorber(Scheduler &sched, const YAML::Node &cfg,
+UDPAbsorber::UDPAbsorber(const std::string &name,
+                         Scheduler &sched, const YAML::Node &cfg,
                          const std::set<std::shared_ptr<Channel>> &channels)
-  : ipv4(cfg ? cfg["ipv4"].as<bool>("true") : true),
+  : name(name),
+    ipv4(cfg ? cfg["ipv4"].as<bool>("true") : true),
     ipv6(cfg ? cfg["ipv6"].as<bool>("true") : true),
     host(cfg ? cfg["host"].as<std::string>("localhost")
          : std::string("localhost")),
@@ -159,7 +161,7 @@ Absorber *make_absorber(Scheduler &sched,
     return nullptr;
 
   if (cfg["udp"])
-    return new UDPAbsorber(sched, cfg["udp"], channel_set);
+    return new UDPAbsorber(inst, sched, cfg["udp"], channel_set);
 
   return nullptr;
 }

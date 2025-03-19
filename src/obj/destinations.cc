@@ -47,7 +47,8 @@
 #include "destruction.hh"
 #include "formatting.hh"
 
-Destination::Destination(const YAML::Node &cfg)
+Destination::Destination(const std::string &name, const YAML::Node &cfg)
+  : name(name)
 {
   const bool ipv4 = cfg["ipv4"].as<bool>("true");
   const bool ipv6 = cfg["ipv6"].as<bool>("true");

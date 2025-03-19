@@ -52,6 +52,7 @@
 #include "streamer.hh"
 
 class TCPIngress : public Ingress {
+  const std::string name;
   const bool ipv4, ipv6;
   const std::string host;
   const std::string srv;
@@ -90,7 +91,8 @@ class TCPIngress : public Ingress {
   std::vector<struct iovec> iov;
 
 public:
-  TCPIngress(Scheduler &sched, AddressManager &, const YAML::Node &);
+  TCPIngress(const std::string &name,
+             Scheduler &sched, AddressManager &, const YAML::Node &);
   ~TCPIngress();
   void ready(Streamer &);
 };

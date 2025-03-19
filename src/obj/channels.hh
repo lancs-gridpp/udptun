@@ -51,6 +51,7 @@ class Payload;
 class Quota;
 
 class Channel : Streamer {
+  const std::string name;
   std::shared_ptr<Ingress> ingress;
   const labelset_t labels;
   IdleEvent queue_event;
@@ -66,7 +67,8 @@ class Channel : Streamer {
   void failed();
 
 public:
-  Channel(Scheduler &, std::shared_ptr<Ingress>, labelset_t,
+  Channel(const std::string &name,
+          Scheduler &, std::shared_ptr<Ingress>, labelset_t,
           Quota &, const std::filesystem::path &);
   ~Channel();
   void submit(const void *, std::size_t);
