@@ -48,6 +48,8 @@
 #include "formatting.hh"
 #include "channels.hh"
 
+Absorber::~Absorber() { }
+
 UDPAbsorber::UDPAbsorber(Scheduler &sched, const YAML::Node &cfg,
                          const std::set<std::shared_ptr<Channel>> &channels)
   : ipv4(cfg ? cfg["ipv4"].as<bool>("true") : true),

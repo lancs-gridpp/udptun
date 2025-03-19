@@ -65,6 +65,7 @@ public:
 
 struct Ingress {
   virtual void ready(Streamer &) = 0;
+  virtual ~Ingress();
 };
 
 class Scheduler;

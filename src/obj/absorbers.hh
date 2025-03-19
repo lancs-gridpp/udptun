@@ -48,6 +48,7 @@
 
 struct Absorber {
   virtual void activate() = 0;
+  virtual ~Absorber();
 };
 
 class Channel;

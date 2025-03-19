@@ -37,6 +37,8 @@
 #include "streamer.hh"
 #include "ingress.hh"
 
+Ingress::~Ingress() { }
+
 Ingress *make_ingress(Scheduler &sched, AddressManager &addrmgr,
                       const std::string &ingress_name,
                       const YAML::Node &cfg)
