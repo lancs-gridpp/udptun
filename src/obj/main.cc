@@ -252,7 +252,7 @@ int main(int argc, const char *const *argv)
         auto find_channel =
           [&cidx = channel_index](const std::string &cn) {
             auto pos = cidx.find(cn);
-            if (pos != cidx.end())
+            if (pos == cidx.end())
               return std::shared_ptr<Channel>();
             return pos->second;
           };
