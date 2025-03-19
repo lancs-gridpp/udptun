@@ -93,6 +93,6 @@ Mostly for testing purposes, you can combine `ingress` and `egress` in one confi
 Queues are stored in `/var/spool/udptun/` by default, overridden with the likes of:
 
 ```
-state:
-  queues: ~/.local/var/spool/udptun
+queues:
+  path: ~/.local/var/spool/udptun
 ```
