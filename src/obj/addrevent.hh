@@ -62,6 +62,8 @@ public:
   AddressEvent(AddressManager &, user_t user);
   ~AddressEvent();
 
+  operator bool() { return on; }
+
   /* Initiate a look-up.  Throws system errors EAGAIN (resources
      unavailable), ENOMEM (out of memory) or ENOSYS (not
      supported). */
