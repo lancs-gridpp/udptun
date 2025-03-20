@@ -62,7 +62,7 @@ public:
   operator bool() const;
 
   friend bool operator ==(const RealTime &lhs, const RealTime &rhs) {
-    return !(lhs == rhs);
+    return !(lhs != rhs);
   }
 
   friend bool operator >(const RealTime &lhs, const RealTime &rhs) {
