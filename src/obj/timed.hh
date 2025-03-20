@@ -56,6 +56,7 @@ public:
   void notify();
   TimedEvent(Scheduler &sched, timed_handler_t action)
     : Event(sched), action(action) { when.zero(); }
+  operator bool() { return bool(when); }
   void set(const RealTime &);
   void set(const TimePeriod &);
   void set(double delay, TimePeriod::unit_t unit)

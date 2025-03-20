@@ -64,6 +64,7 @@ public:
   Event(Scheduler &sched) : prio_usr(1), prio_appl(0), sched(&sched) { }
   prio_t prio() { return prio_usr; }
   void prio(prio_t p);
+  virtual operator bool() = 0;
   virtual void notify() = 0;
   virtual void cancel() { }
   virtual ~Event() { cancel(); }

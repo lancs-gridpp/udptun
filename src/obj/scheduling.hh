@@ -57,6 +57,7 @@ class Scheduler {
   friend class IdleEvent;
   void set(IdleEvent *);
   void cancel(IdleEvent *);
+  bool test(IdleEvent *);
 
   friend class TimedEvent;
   void set(TimedEvent *);

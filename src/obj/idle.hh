@@ -51,6 +51,7 @@ class IdleEvent : public Event {
 public:
   void notify();
   IdleEvent(Scheduler &sched, idle_handler_t action);
+  operator bool();
   void set();
   void cancel();
 };

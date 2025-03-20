@@ -57,6 +57,7 @@ public:
   void notify();
   DescriptorEvent(Scheduler &sched, descriptor_handler_t);
   void set(int fd, uint32_t events);
+  operator bool() { return fd >= 0; }
   void cancel();
 };
 

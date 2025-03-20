@@ -45,6 +45,11 @@ void IdleEvent::notify()
   action();
 }
 
+IdleEvent::operator bool()
+{
+  return sched->test(this);
+}
+
 void IdleEvent::set()
 {
   sched->set(this);
@@ -65,4 +70,9 @@ void Scheduler::set(IdleEvent *mom)
 void Scheduler::cancel(IdleEvent *mom)
 {
   idleness.erase(mom);
+}
+
+bool Scheduler::test(IdleEvent *mom)
+{
+  return idleness.find(mom) != idleness.end();
 }
