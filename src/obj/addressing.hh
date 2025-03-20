@@ -46,7 +46,7 @@
 #include "idle.hh"
 #include "sigevent.hh"
 
-class SignalManager;
+class Scheduler;
 class AddressEvent;
 
 class AddressManager {
@@ -59,7 +59,7 @@ class AddressManager {
   void check();
 
 public:
-  AddressManager(SignalManager &sinfo, int signo);
+  AddressManager(Scheduler &sinfo, int signo);
   ~AddressManager();
 };
 

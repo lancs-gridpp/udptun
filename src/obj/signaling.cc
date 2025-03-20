@@ -35,8 +35,6 @@
  */
 
 #include <unistd.h>
-#include <sys/signalfd.h>
-#include <sys/epoll.h>
 
 #include <cassert>
 #include <csignal>
@@ -45,10 +43,11 @@
 #include <system_error>
 #include <functional>
 
-#include "signaling.hh"
+#include "scheduling.hh"
 #include "sigevent.hh"
 #include "formatting.hh"
 
+#if 0
 SignalManager::SignalManager(Scheduler &sched)
   : fdev(sched,
          std::bind(&SignalManager::on_signal, this, std::placeholders::_1)),
@@ -152,6 +151,7 @@ void SignalManager::update(int signo)
     fdev.cancel();
   }
 }
+#endif
 
 void SignalEvent::reset()
 {
@@ -159,8 +159,13 @@ void SignalEvent::reset()
      signal number, as the caller will do it, or does not care (e.g.,
      the destructor). */
   assert(signo != 0);
-  mgr.users[signo].erase(this);
-  mgr.update(signo);
+  sched->signal_handlers[signo].erase(this);
+  sched->update_signal(signo);
+}
+
+void SignalEvent::notify()
+{
+  user();
 }
 
 void SignalEvent::cancel()
@@ -170,8 +175,8 @@ void SignalEvent::cancel()
   signo = 0;
 }
 
-SignalEvent::SignalEvent(SignalManager &mgr, user_t user)
-  : mgr(mgr), signo(0), user(user) { }
+SignalEvent::SignalEvent(Scheduler &sched, user_t user)
+  : Event(sched), signo(0), user(user) { }
 
 void SignalEvent::set(int signo)
 {
@@ -185,11 +190,11 @@ void SignalEvent::set(int signo)
   if (this->signo != 0) reset();
 
   /* Put us in the right place in the manager's table. */
-  mgr.users[signo].insert(this);
+  sched->signal_handlers[signo].insert(this);
   this->signo = signo;
 
   /* Make sure the manager is watching this signal. */
-  mgr.update(signo);
+  sched->update_signal(signo);
 }
 
 SignalEvent::~SignalEvent()

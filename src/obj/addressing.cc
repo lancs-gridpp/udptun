@@ -45,6 +45,7 @@
 #include "formatting.hh"
 #include "sigevent.hh"
 #include "addrevent.hh"
+#include "scheduling.hh"
 
 void AddressManager::check()
 {
@@ -190,7 +191,7 @@ void AddressEvent::check()
   }
 }
 
-AddressManager::AddressManager(SignalManager &sigmgr,
+AddressManager::AddressManager(Scheduler &sigmgr,
 			       int signo)
   : signo(signo), sigev(sigmgr, std::bind(&AddressManager::check, this))
 {

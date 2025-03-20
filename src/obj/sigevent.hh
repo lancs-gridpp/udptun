@@ -37,28 +37,28 @@
 #ifndef sigevent_included
 #define sigevent_included
 
-class SignalManager;
+#include "events.hh"
 
-struct SignalEvent {
+struct SignalEvent : public Event {
   typedef std::function<void()> user_t;
 
 public:
-  SignalManager &mgr;
-
   /* This specifies the user's position in the manager's map.  As 0 is
      not a valid signal number, it is used to indicate that the event
      is not set. */
   int signo;
   user_t user;
 
-  friend class SignalManager;
+  friend class Scheduler;
 
   void reset();
 
 public:
-  SignalEvent(SignalManager &, user_t);
+  SignalEvent(Scheduler &, user_t);
+  operator bool() { return signo != 0; }
   void set(int signo);
   void cancel();
+  void notify();
   ~SignalEvent();
 };
 

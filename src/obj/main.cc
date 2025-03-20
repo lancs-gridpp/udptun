@@ -66,7 +66,6 @@
 #include "timed.hh"
 #include "quotas.hh"
 #include "addressing.hh"
-#include "signaling.hh"
 #include "channels.hh"
 #include "formatting.hh"
 #include "fnexp.hh"
@@ -116,23 +115,27 @@ int main(int argc, const char *const *argv)
     config_filenames.push_back(argv[i]);
   Config config(config_filenames);
 
-  sigset_t okay_sigs;
-  if (sigemptyset(&okay_sigs) < 0)
-    throw std::system_error(errno, std::system_category(), "sigemptyset");
-  if (sigaddset(&okay_sigs, SIGHUP) < 0)
-    throw std::system_error(errno, std::system_category(), "sigaddset(HUP)");
-  if (sigaddset(&okay_sigs, SIGINT) < 0)
-    throw std::system_error(errno, std::system_category(), "sigaddset(INT)");
-  if (sigaddset(&okay_sigs, SIGTERM) < 0)
-    throw std::system_error(errno, std::system_category(), "sigaddset(TERM)");
-  if (sigaddset(&okay_sigs, SIGUSR2) < 0)
-    throw std::system_error(errno, std::system_category(), "sigaddset(USR2)");
-
-  /* Block signals. */
-  if (sigprocmask(SIG_BLOCK, &okay_sigs, nullptr) < 0)
-    throw std::system_error(errno, std::system_category(), "sigprocmask");
+  {
+    /* Block a bunch of signals.  These should include the ones we
+       handle outside the polling, and the ones in too. */
+    sigset_t okay_sigs;
+    if (sigemptyset(&okay_sigs) < 0)
+      throw std::system_error(errno, std::system_category(), "sigemptyset");
+    if (sigaddset(&okay_sigs, SIGHUP) < 0)
+      throw std::system_error(errno, std::system_category(), "sigaddset(HUP)");
+    if (sigaddset(&okay_sigs, SIGINT) < 0)
+      throw std::system_error(errno, std::system_category(), "sigaddset(INT)");
+    if (sigaddset(&okay_sigs, SIGTERM) < 0)
+      throw std::system_error(errno, std::system_category(), "sigaddset(TERM)");
+    if (sigaddset(&okay_sigs, SIGUSR2) < 0)
+      throw std::system_error(errno, std::system_category(), "sigaddset(USR2)");
+    if (sigprocmask(SIG_BLOCK, &okay_sigs, nullptr) < 0)
+      throw std::system_error(errno, std::system_category(), "sigprocmask");
+  }
 
   {
+    /* Set a bunch of signal handlers that are not interrupted by
+       other signals. */
     extern const struct sigaction empty_sa;
     struct sigaction sa = empty_sa;
     if (sigfillset(&sa.sa_mask) < 0)
@@ -141,31 +144,34 @@ int main(int argc, const char *const *argv)
     /* Set a handler for SIGHUP. */
     sa.sa_handler = &on_reload;
     if (sigaction(SIGHUP, &sa, NULL) < 0)
-      throw std::system_error(errno, std::system_category(), "sigaction");
+      throw std::system_error(errno, std::system_category(), "sigaction(HUP)");
 
     /* Set a handler for SIGINT. */
     sa.sa_handler = &on_quit;
     if (sigaction(SIGINT, &sa, NULL) < 0)
-      throw std::system_error(errno, std::system_category(), "sigaction");
+      throw std::system_error(errno, std::system_category(), "sigaction(INT)");
 
     /* Set a handler for SIGTERM. */
     sa.sa_handler = &on_quit;
     if (sigaction(SIGTERM, &sa, NULL) < 0)
-      throw std::system_error(errno, std::system_category(), "sigaction");
+      throw std::system_error(errno, std::system_category(), "sigaction(TERM)");
   }
 
   Scheduler sched;
 
   {
-    /* Express which signals we'll allow while polling. */
+    /* Express which signals are going to be blocked while polling.
+       We need only need to block ones that the scheduler manages, as
+       signalfd() requires them to be blocked. */
     sigset_t poll_sigs;
     if (sigemptyset(&poll_sigs) < 0)
       throw std::system_error(errno, std::system_category(), "sigemptyset");
+    if (sigaddset(&poll_sigs, SIGUSR2) < 0)
+      throw std::system_error(errno, std::system_category(), "sigaddset(USR2)");
     sched.signal_mask(poll_sigs);
   }
 
-  SignalManager sigmgr(sched);
-  AddressManager addrmgr(sigmgr, SIGUSR2);
+  AddressManager addrmgr(sched, SIGUSR2);
 
   Quota quota;
 

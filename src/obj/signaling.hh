@@ -37,6 +37,8 @@
 #ifndef signaling_included
 #define signaling_included
 
+#error "disused"
+
 #include <map>
 #include <set>
 #include <functional>

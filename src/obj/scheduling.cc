@@ -35,7 +35,10 @@
  */
 
 #include <sys/epoll.h>
+#include <sys/signalfd.h>
+#include <strings.h>
 
+#include <cstring>
 #include <csignal>
 #include <climits>
 #include <cassert>
@@ -46,7 +49,9 @@
 #include "descriptor.hh"
 #include "timed.hh"
 #include "idle.hh"
+#include "sigevent.hh"
 #include "scheduling.hh"
+#include "formatting.hh"
 
 void Scheduler::enqueue(Event *mom)
 {
@@ -63,7 +68,6 @@ void Scheduler::dequeue(Event *mom)
     mom->prio_appl = 0;
   }
 }
-#include <iostream>
 
 int Scheduler::timeout()
 {
@@ -101,23 +105,48 @@ int Scheduler::timeout()
   return res;
 }
 
+void Scheduler::update_signal(int signo)
+{
+  /* Do we want to start watching this signal, or stop? */
+  auto pos = signal_handlers.find(signo);
+  bool state = pos != signal_handlers.end() && !pos->second.empty();
+  if (!state) signal_handlers.erase(signo);
+
+  /* Make no changes if we're already doing the right thing about the
+     signal. */
+  if (sigismember(&watching, signo) == state) return;
+
+  /* Modify the state that we watch for.  Use a temporary copy of the
+     signal set, and commit if the changes work. */
+  auto tmp = watching;
+  if ((state ? sigaddset(&tmp, signo) : sigdelset(&tmp, signo)) < 0)
+    throw std::system_error(errno, std::system_category(),
+			    sformat("sig%sset(%s)",
+                                    state ? "add" : "del",
+                                    sigabbrev_np(signo)));
+  int rc = signalfd(sigfd, &tmp, 0);
+  if (rc < 0)
+    throw std::system_error(errno, std::system_category(),
+                            sformat("signalfd(%s%s)", state ? "+" : "-",
+                                    strsignal(signo)));
+  watching = tmp;
+}
+
 void Scheduler::poll()
 {
   struct epoll_event events[20];
   assert(epfd >= 0);
-  int nfds = epoll_pwait(epfd,
-                         events, sizeof events / sizeof events[0],
-                         timeout(),
-                         &sigmsk);
 
+  /* Poll for events, and allow ourselves to be interrupted by
+     signals. */
+  int nfds = epoll_pwait(epfd, events, sizeof events / sizeof events[0],
+                         timeout(), &sigmsk);
   if (nfds < 0) {
     switch (errno) {
     default:
       throw std::system_error(errno, std::system_category(), "epoll_pwait");
 
     case EINTR:
-      /* A signal occurred, so we should restart polling with fresh
-         arguments. */
       return;
     }
   }
@@ -125,6 +154,32 @@ void Scheduler::poll()
   /* Place triggered descriptor events in queues, storing the event
      set in the event object. */
   for (int i = 0; i < nfds; i++) {
+    if (events[i].data.ptr == this) {
+      /* Deal with a signal on our special descriptor. */
+      assert(events[i].events & EPOLLIN);
+      for ( ; ; ) {
+        struct signalfd_siginfo data;
+        ssize_t nb = read(sigfd, &data, sizeof data);
+        if (nb < 0) {
+          if (errno == EWOULDBLOCK || errno == EAGAIN)
+            break;
+          throw std::system_error(errno, std::system_category(), "read(sigfd)");
+        }
+        int signo = data.ssi_signo;
+
+        /* Enqueue each of the handlers for this signal. */
+        auto tpos = signal_handlers.find(signo);
+        if (tpos == signal_handlers.end()) continue;
+        for (auto ptr : tpos->second) {
+          ptr->signo = 0;
+          enqueue(ptr);
+        }
+
+        /* Discard that signal. */
+        signal_handlers.erase(tpos);
+        update_signal(signo);
+      }
+    }
     auto ptr = static_cast<DescriptorEvent *>(events[i].data.ptr);
     ptr->update(events[i].events);
     enqueue(ptr);
@@ -169,18 +224,44 @@ void Scheduler::signal_mask(const sigset_t &sigmsk)
   this->sigmsk = sigmsk;
 }
 
-Scheduler::Scheduler() : epfd(-1)
+Scheduler::Scheduler() : epfd(-1), sigfd(-1)
 {
-  if (sigemptyset(&sigmsk) < 0)
-    throw std::system_error(errno, std::system_category(), "sigemptyset");
+  if (sigemptyset(&sigmsk) != 0)
+    throw std::system_error(errno, std::system_category(), "sigemptyset(sigmsk)");
 
-  epfd = epoll_create1(0);
+  if (sigemptyset(&watching) != 0)
+    throw std::system_error(errno, std::system_category(), "sigemptyset(watching)");
+
+  int epfd = epoll_create1(0);
   if (epfd < 0)
-    throw std::system_error(errno, std::system_category(), "epoll_create0");
+    throw std::system_error(errno, std::system_category(), "epoll_create1");
+
+  int sigfd = signalfd(-1, &watching, SFD_NONBLOCK);
+  if (sigfd < 0) {
+    int ec = errno;
+    ::close(epfd);
+    throw std::system_error(ec, std::system_category(), "signalfd");
+  }
+
+  /* Make sure we can receive signals. */
+  struct epoll_event evdat;
+  evdat.events = EPOLLIN;
+  evdat.data.ptr = this;
+  if (epoll_ctl(epfd, EPOLL_CTL_ADD, sigfd, &evdat) != 0) {
+    int ec = errno;
+    ::close(epfd);
+    ::close(sigfd);
+    throw std::system_error(ec, std::system_category(), "epoll_ctl(sigs)");
+  }
+
+  this->epfd = epfd;
+  this->sigfd = sigfd;
 }
 
 Scheduler::~Scheduler()
 {
   if (epfd >= 0)
     ::close(epfd);
+  if (sigfd >= 0)
+    ::close(sigfd);
 }

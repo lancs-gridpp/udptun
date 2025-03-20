@@ -41,19 +41,27 @@
 
 #include <map>
 #include <set>
+#include <vector>
 
 #include "priority.hh"
 
+class Event;
 class IdleEvent;
 class TimedEvent;
 class DescriptorEvent;
+class SignalEvent;
 class RealTime;
 
 class Scheduler {
-  int epfd;
+  int epfd, sigfd;
   std::map<RealTime, std::set<TimedEvent *>> table;
   std::set<IdleEvent *> idleness;
-  sigset_t sigmsk;
+  std::map<int, std::set<SignalEvent *>> signal_handlers;
+
+  /* 'watching' is passed to signalfd, and is updated to track the
+     keys of signal_handlers.  'sigmsk' is user-supplied, and is the
+     mask to use while polling. */
+  sigset_t sigmsk, watching;
 
   std::map<prio_t, std::set<Event *>> queues;
 
@@ -74,6 +82,9 @@ class Scheduler {
   friend class DescriptorEvent;
   void add(DescriptorEvent *, bool mod);
   void remove(DescriptorEvent *);
+
+  friend class SignalEvent;
+  void update_signal(int);
 
   int timeout();
 
