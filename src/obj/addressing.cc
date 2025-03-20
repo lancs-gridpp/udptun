@@ -112,6 +112,9 @@ void AddressEvent::initiate(const std::string &node,
   switch (rc) {
   case 0:
     on = true;
+    mgr.users.insert(this);
+    /* Now we await a call to check(), which has to be triggered by a
+       signal. */
     break;
 
   case EAI_AGAIN:
@@ -122,11 +125,10 @@ void AddressEvent::initiate(const std::string &node,
 
   case EAI_SYSTEM:
     throw std::system_error(ENOSYS, std::system_category(), "getaddrinfo_a");
-  }
 
-  mgr.users.insert(this);
-  /* Now we await a call to check(), which has to be triggered by a
-     signal. */
+  default:
+    throw std::runtime_error(sformat("unreachable %s:%d", __FILE__, __LINE__));
+  }
 }
 
 void AddressEvent::cancel()
