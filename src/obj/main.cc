@@ -154,12 +154,16 @@ int main(int argc, const char *const *argv)
       throw std::system_error(errno, std::system_category(), "sigaction");
   }
 
-  /* Express which signals we'll allow while polling. */
-  sigset_t poll_sigs;
-  if (sigemptyset(&poll_sigs) < 0)
-    throw std::system_error(errno, std::system_category(), "sigemptyset");
   Scheduler sched;
-  sched.signal_mask(poll_sigs);
+
+  {
+    /* Express which signals we'll allow while polling. */
+    sigset_t poll_sigs;
+    if (sigemptyset(&poll_sigs) < 0)
+      throw std::system_error(errno, std::system_category(), "sigemptyset");
+    sched.signal_mask(poll_sigs);
+  }
+
   SignalManager sigmgr(sched);
   AddressManager addrmgr(sigmgr, SIGUSR2);
 
