@@ -91,6 +91,9 @@ public:
   /* Examine the head of the queue, or return null. */
   Payload *peek();
 
+  /* If the queue is not empty, tell the user. */
+  void poke();
+
   /* Consume the head of the queue. */
   void consume();
 

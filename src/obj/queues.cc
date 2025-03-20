@@ -145,6 +145,11 @@ void PayloadQueue::discard_file()
   quota.decrease(quota_user, sz);
 }
 
+void PayloadQueue::poke()
+{
+  if (peek()) user();
+}
+
 Payload *PayloadQueue::peek()
 {
   /* Provide a pointer to the head of the queue if present.  If not,
