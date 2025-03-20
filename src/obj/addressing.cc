@@ -53,6 +53,9 @@ void AddressManager::check()
      so the users will be informed on the next event iteration. */
   for (auto user : users)
     user->check();
+
+  /* Always be ready for a signal. */
+  sigev.set(signo);
 }
 
 AddressEvent::AddressEvent(AddressManager &mgr, user_t user)
