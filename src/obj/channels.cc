@@ -63,7 +63,8 @@ Channel::~Channel()
 
 void Channel::activate()
 {
-  ingress->activate();
+  /* Tell the queue to tell us if it already has some data. */
+  queue.poke();
 }
 
 bool Channel::describe(std::vector<struct iovec> &iov)

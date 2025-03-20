@@ -57,15 +57,15 @@ class TCPIngress : public Ingress {
   const std::string host;
   const std::string srv;
   int sock;
-  bool connected, upout_ready, activated;
+  bool connected, upout_ready;
 
   struct gaicb addrinfo;
 
   DescriptorEvent fdev;
-  void descriptor_event(uint32_t);
+  void descriptor_ready(uint32_t);
 
   TimedEvent rstev;
-  void restart_event();
+  void initiate_lookup();
 
   const struct addrinfo *ainf;
   AddressEvent addrev;
@@ -94,7 +94,6 @@ public:
   TCPIngress(const std::string &name,
              Scheduler &sched, AddressManager &, const YAML::Node &);
   ~TCPIngress();
-  void activate();
   void ready(Streamer &);
 };
 

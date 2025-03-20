@@ -65,7 +65,6 @@ public:
 
 struct Ingress {
   virtual void ready(Streamer &) = 0;
-  virtual void activate() = 0;
   virtual ~Ingress();
 };
 

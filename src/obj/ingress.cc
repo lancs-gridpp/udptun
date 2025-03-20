@@ -57,9 +57,9 @@ TCPIngress::TCPIngress(const std::string &name,
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>()),
-    sock(-1), connected(false), upout_ready(false), activated(false),
-    fdev(sched, [this](uint32_t evs) { descriptor_event(evs); }),
-    rstev(sched, [this]() { restart_event(); }),
+    sock(-1), connected(false), upout_ready(false),
+    fdev(sched, [this](uint32_t evs) { descriptor_ready(evs); }),
+    rstev(sched, [this]() { initiate_lookup(); }),
     addrev(addrmgr, [this](const struct addrinfo *p) { address_resolved(p); })
 { }
 
@@ -71,18 +71,20 @@ TCPIngress::~TCPIngress()
     ::close(sock);
 }
 
-void TCPIngress::activate()
+void TCPIngress::descriptor_ready(uint32_t evs)
 {
-  if (activated) return;
-  activated = true;
+  assert(sock >= 0);
+  if (evs & EPOLLRDHUP) {
+    /* The peer closed the connection.  Discard the socket, and try
+       again in a while. */
+    clear_socket();
+    rstev.set(TimePeriod(30, TimePeriod::SECOND));
+    return;
+  }
 
-  restart_event();
-}
-
-void TCPIngress::descriptor_event(uint32_t)
-{
   /* The socket has become writable.  Is the connection operation just
      completing? */
+  assert(evs & EPOLLOUT);
   if (!connected) {
     int soerr;
     socklen_t soerrlen = sizeof soerr;
@@ -116,10 +118,11 @@ void TCPIngress::clear_socket()
   ::close(sock), sock = -1;
 }
 
-void TCPIngress::restart_event()
+void TCPIngress::initiate_lookup()
 {
-  /* Try restarting.  Clear out any existing socket. */
-  if (sock >= 0) clear_socket();
+  assert(!rstev);
+  assert(!addrev);
+  assert(sock < 0);
 
   /* Resolve the node and service. */
   ainf = nullptr;
@@ -200,6 +203,7 @@ void TCPIngress::try_connect()
 void TCPIngress::try_send()
 {
   assert(sock >= 0);
+  assert(connected);
   if (!upout_ready) {
     /* We are not ready to send, so ask when we can. */
     fdev.set(sock, EPOLLOUT);
@@ -270,6 +274,21 @@ void TCPIngress::ready(Streamer &src)
 
   /* If the queue has just become non-empty, see if we can send
      something, or find out when we can. */
-  if (was_empty && sock >= 0 && connected)
-    try_send();
+  if (!was_empty) return;
+  if (sock < 0) {
+    /* Do nothing if we're taking a break. */
+    if (rstev) return;
+
+    /* Do nothing if we're awaiting a look-up. */
+    if (addrev) return;
+
+    /* Initiate the first look-up. */
+    initiate_lookup();
+    return;
+  }
+
+  /* Do nothing if we have a socket, but it's not connected. */
+  if (!connected) return;
+
+  try_send();
 }
