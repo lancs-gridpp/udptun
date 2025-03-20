@@ -57,7 +57,7 @@ TCPIngress::TCPIngress(const std::string &name,
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>()),
-    sock(-1), connected(false), upout_ready(false),
+    sock(-1), connected(false), upout_ready(false), activated(false),
     fdev(sched, [this](uint32_t evs) { descriptor_event(evs); }),
     rstev(sched, [this]() { restart_event(); }),
     addrev(addrmgr, [this](const struct addrinfo *p) { address_resolved(p); })
@@ -73,9 +73,10 @@ TCPIngress::~TCPIngress()
 
 void TCPIngress::activate()
 {
-  if (sock >= 0) return;
+  if (activated) return;
+  activated = true;
 
-  // restart_event();
+  restart_event();
 }
 
 void TCPIngress::descriptor_event(uint32_t)

@@ -57,7 +57,7 @@ class TCPIngress : public Ingress {
   const std::string host;
   const std::string srv;
   int sock;
-  bool connected, upout_ready;
+  bool connected, upout_ready, activated;
 
   struct gaicb addrinfo;
 
