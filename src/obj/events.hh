@@ -48,10 +48,9 @@
 
 #include "periods.hh"
 #include "realtime.hh"
+#include "priority.hh"
 
 class Scheduler;
-
-typedef unsigned prio_t;
 
 class Event {
   friend class Scheduler;

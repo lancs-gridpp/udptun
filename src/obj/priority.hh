@@ -34,54 +34,9 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef scheduling_included
-#define scheduling_included
+#ifndef priority_included
+#define priority_included
 
-#include <signal.h>
-
-#include <map>
-#include <set>
-
-#include "priority.hh"
-
-class IdleEvent;
-class TimedEvent;
-class DescriptorEvent;
-class RealTime;
-
-class Scheduler {
-  int epfd;
-  std::map<RealTime, std::set<TimedEvent *>> table;
-  std::set<IdleEvent *> idleness;
-  sigset_t sigmsk;
-
-  std::map<prio_t, std::set<Event *>> queues;
-
-  friend class Event;
-
-  void enqueue(Event *);
-  void dequeue(Event *);
-
-  friend class IdleEvent;
-  void set(IdleEvent *);
-  void cancel(IdleEvent *);
-  bool test(IdleEvent *);
-
-  friend class TimedEvent;
-  void set(TimedEvent *);
-  void cancel(TimedEvent *);
-
-  friend class DescriptorEvent;
-  void add(DescriptorEvent *, bool mod);
-  void remove(DescriptorEvent *);
-
-  int timeout();
-
-public:
-  Scheduler();
-  void signal_mask(const sigset_t &);
-  void poll();
-  ~Scheduler();
-};
+typedef unsigned prio_t;
 
 #endif
