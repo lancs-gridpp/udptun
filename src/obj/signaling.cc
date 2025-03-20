@@ -134,6 +134,7 @@ void SignalManager::update(int signo)
                                     strsignal(signo)));
 
   /* Apply the changes. */
+  assert(!sigismember(&tmp, signo) == !state);
   int rc = signalfd(fd, &tmp, 0);
   if (rc < 0)
     throw std::system_error(errno, std::system_category(),
