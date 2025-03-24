@@ -106,6 +106,8 @@ void TCPIngress::descriptor_ready(uint32_t evs)
     /* Record that the connection is complete, and wait for another
        write event. */
     connected = true;
+    fdev.set(sock, EPOLLOUT);
+    return;
   }
 
   upout_ready = true;
