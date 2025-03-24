@@ -108,6 +108,7 @@ void TCPEgress::Listener::handle_fd(uint32_t)
     /* Get ready to accept another connection. */
     assert(sock >= 0);
     fdev.set(sock, EPOLLIN);
+    return;
   } while (true);
 }
 
