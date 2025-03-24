@@ -70,7 +70,7 @@ bool Payload::load(std::ifstream &in, std::size_t &sum)
   std::size_t len = (lenbytes[0] << 8) | lenbytes[1];
   unsigned char *base = new unsigned char[len];
   {
-    LegacyDestructor([&base]() { if (base) delete[] base; });
+    LegacyDestructor base_destroyer([&base]() { if (base) delete[] base; });
     in.read(reinterpret_cast<char *>(base), len);
     if (in.fail())
       return false;
