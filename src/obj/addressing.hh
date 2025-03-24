@@ -44,7 +44,7 @@
 #include <string>
 
 #include "idle.hh"
-#include "sigevent.hh"
+#include "signaling.hh"
 
 class Scheduler;
 class AddressEvent;

@@ -37,32 +37,29 @@
 #ifndef signaling_included
 #define signaling_included
 
-#error "disused"
+#include "events.hh"
 
-#include <map>
-#include <set>
-#include <functional>
-
-#include "descriptor.hh"
-
-class IdleEvent;
-class Scheduler;
-class SignalEvent;
-
-class SignalManager {
-  friend class SignalEvent;
-  DescriptorEvent fdev;
-  int fd;
-  sigset_t watching;
-
-  std::map<int, std::set<SignalEvent *>> users;
-
-  void on_signal(uint32_t events);
-  void update(int);
+struct SignalEvent : public Event {
+  typedef std::function<void()> user_t;
 
 public:
-  SignalManager(Scheduler &sched);
-  ~SignalManager();
+  /* This specifies the user's position in the manager's map.  As 0 is
+     not a valid signal number, it is used to indicate that the event
+     is not set. */
+  int signo;
+  user_t user;
+
+  friend class Scheduler;
+
+  void reset();
+
+public:
+  SignalEvent(Scheduler &, user_t);
+  operator bool() { return signo != 0; }
+  void set(int signo);
+  void cancel();
+  void notify();
+  ~SignalEvent();
 };
 
 #endif

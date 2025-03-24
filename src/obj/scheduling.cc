@@ -49,7 +49,7 @@
 #include "descriptor.hh"
 #include "timed.hh"
 #include "idle.hh"
-#include "sigevent.hh"
+#include "signaling.hh"
 #include "scheduling.hh"
 #include "formatting.hh"
 

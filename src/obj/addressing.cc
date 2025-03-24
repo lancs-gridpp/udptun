@@ -43,7 +43,7 @@
 
 #include "addressing.hh"
 #include "formatting.hh"
-#include "sigevent.hh"
+#include "signaling.hh"
 #include "addrevent.hh"
 #include "scheduling.hh"
 
