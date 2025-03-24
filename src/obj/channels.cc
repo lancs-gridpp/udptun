@@ -80,11 +80,8 @@ bool Channel::describe(std::vector<struct iovec> &iov)
   length_to_bytes(current->size(), lenword, done, MAX_LABEL_BYTES, iov);
   auto m = done > MAX_LABEL_BYTES + MAX_LENGTH_BYTES
     ? MAX_LABEL_BYTES + MAX_LENGTH_BYTES + current->size() - done : current->size();
-  struct iovec v = {
-    .iov_base = (void *) (current->base() + (current->size() - m)),
-    .iov_len = m,
-  };
-  iov.push_back(v);
+  assert(m > 0);
+  push_onto(iov, (current->base() + (current->size() - m)), m);
   return true;
 }
 

@@ -50,6 +50,11 @@ constexpr unsigned MAX_LENGTH_BYTES = 2;
 
 struct iovec;
 
+void push_onto(std::vector<struct iovec> &vec, unsigned char *base,
+               std::size_t len);
+void push_onto(std::vector<struct iovec> &vec, const unsigned char *base,
+               std::size_t len);
+
 bool labels_to_bytes(labelset_t, unsigned char *,
                      std::size_t done, std::size_t pos,
                      std::vector<struct iovec> &);

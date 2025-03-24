@@ -37,10 +37,29 @@
 #include <sys/uio.h>
 
 #include <cassert>
+#include <cstring>
 
 #include <algorithm>
 
 #include "labels.hh"
+
+void push_onto(std::vector<struct iovec> &vec, unsigned char *base,
+               std::size_t len)
+{
+  vec.resize(vec.size() + 1);
+  ::memset(&vec.back(), 0, sizeof vec.back());
+  vec.back().iov_base = base;
+  vec.back().iov_len = len;
+}
+
+void push_onto(std::vector<struct iovec> &vec, const unsigned char *base,
+               std::size_t len)
+{
+  vec.resize(vec.size() + 1);
+  ::memset(&vec.back(), 0, sizeof vec.back());
+  vec.back().iov_base = (void *) base;
+  vec.back().iov_len = len;
+}
 
 bool labels_to_bytes(labelset_t labels, unsigned char *buf,
                      std::size_t done, std::size_t pos,
@@ -51,11 +70,7 @@ bool labels_to_bytes(labelset_t labels, unsigned char *buf,
   assert(m >= 1);
   for (unsigned i = MAX_LABEL_BYTES - m; i < MAX_LABEL_BYTES; i++)
     buf[i] = (labels >> (i * 8)) & 0xffu;
-  struct iovec v = {
-    .iov_base = buf + (MAX_LABEL_BYTES - m),
-    .iov_len = m,
-  };
-  vec.push_back(v);
+  push_onto(vec, buf + (MAX_LABEL_BYTES - m), m);
   return true;
 }
 
@@ -68,10 +83,6 @@ bool length_to_bytes(unsigned len, unsigned char *buf,
   assert(m >= 1);
   for (unsigned i = MAX_LENGTH_BYTES - m; i < MAX_LENGTH_BYTES; i++)
     buf[i] = (len >> ((MAX_LENGTH_BYTES - 1 - i) * 8)) & 0xffu;
-  struct iovec v = {
-    .iov_base = buf + (MAX_LENGTH_BYTES - m),
-    .iov_len = m,
-  };
-  vec.push_back(v);
+  push_onto(vec, buf + (MAX_LENGTH_BYTES - m), m);
   return true;
 }
