@@ -45,6 +45,7 @@
 #include <functional>
 #include <map>
 #include <set>
+#include <string>
 
 #include "periods.hh"
 #include "realtime.hh"
@@ -55,12 +56,16 @@ class Scheduler;
 class Event {
   friend class Scheduler;
   prio_t prio_usr, prio_appl;
+  std::string name_;
 
 protected:
   Scheduler *const sched;
 
 public:
-  Event(Scheduler &sched) : prio_usr(1), prio_appl(0), sched(&sched) { }
+  Event(Scheduler &sched) : prio_usr(1), prio_appl(0),
+                            name_("unk"), sched(&sched) { }
+  void name(const std::string &name) { name_ = name; }
+  const std::string &name() { return name_; }
   prio_t prio() { return prio_usr; }
   void prio(prio_t p);
   virtual operator bool() = 0;

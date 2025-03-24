@@ -71,7 +71,10 @@ Emitter::Emitter(Scheduler &sched, const YAML::Node &cfg)
          : std::string("localhost")),
     srv(cfg ? cfg["port"].as<std::string>() : std::string()),
     sock(-1), ready(false),
-    fdev(sched, std::bind(&Emitter::handle_fd, this, std::placeholders::_1)) { }
+    fdev(sched, std::bind(&Emitter::handle_fd, this, std::placeholders::_1))
+{
+  fdev.name("emitter:?:descriptor");
+}
 
 void Emitter::activate()
 {

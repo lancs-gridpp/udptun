@@ -43,6 +43,13 @@
 
 #include <iostream>
 
+TimedEvent::TimedEvent(Scheduler &sched, timed_handler_t action)
+  : Event(sched), action(action)
+{
+  when.zero();
+  name("timed");
+}
+
 void TimedEvent::notify()
 {
   action();

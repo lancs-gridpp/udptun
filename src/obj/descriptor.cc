@@ -62,7 +62,10 @@ std::string epoll_event_str(uint32_t events)
 }
 
 DescriptorEvent::DescriptorEvent(Scheduler &sched, descriptor_handler_t action)
-  : Event(sched), action(action), fd(-1) { }
+  : Event(sched), action(action), fd(-1)
+{
+  name("descriptor");
+}
 
 void DescriptorEvent::set(int fd, uint32_t events)
 {

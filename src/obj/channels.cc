@@ -42,6 +42,7 @@
 #include "quotas.hh"
 #include "payloads.hh"
 #include "scheduling.hh"
+#include "formatting.hh"
 
 Channel::Channel(const std::string &name,
                  Scheduler &sched,
@@ -54,7 +55,7 @@ Channel::Channel(const std::string &name,
           100 * 1024, quota, dir, std::bind(&IdleEvent::set, queue_event)),
     current(nullptr), done(0)
 {
-  // TODO
+  queue_event.name(sformat("channel:%s:queue", name.c_str()));
 }
 
 Channel::~Channel()

@@ -38,7 +38,10 @@
 #include "scheduling.hh"
 
 IdleEvent::IdleEvent(Scheduler &sched, idle_handler_t action)
-  : Event(sched), action(action) { }
+  : Event(sched), action(action)
+{
+  name("idle");
+}
 
 void IdleEvent::notify()
 {

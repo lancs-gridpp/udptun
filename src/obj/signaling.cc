@@ -176,7 +176,10 @@ void SignalEvent::cancel()
 }
 
 SignalEvent::SignalEvent(Scheduler &sched, user_t user)
-  : Event(sched), signo(0), user(user) { }
+  : Event(sched), signo(0), user(user)
+{
+  name("signal");
+}
 
 void SignalEvent::set(int signo)
 {

@@ -47,6 +47,7 @@
 #include <system_error>
 
 #include "ingress.hh"
+#include "formatting.hh"
 
 TCPIngress::TCPIngress(const std::string &name,
                        Scheduler &sched,
@@ -61,7 +62,10 @@ TCPIngress::TCPIngress(const std::string &name,
     fdev(sched, [this](uint32_t evs) { descriptor_ready(evs); }),
     rstev(sched, [this]() { initiate_lookup(); }),
     addrev(addrmgr, [this](const struct addrinfo *p) { address_resolved(p); })
-{ }
+{
+  rstev.name(sformat("ingress:%s:reset", name.c_str()));
+  fdev.name(sformat("ingress:%s:descriptor", name.c_str()));
+}
 
 TCPIngress::~TCPIngress()
 {

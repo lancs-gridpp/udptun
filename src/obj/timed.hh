@@ -54,8 +54,7 @@ class TimedEvent : public Event {
 
 public:
   void notify();
-  TimedEvent(Scheduler &sched, timed_handler_t action)
-    : Event(sched), action(action) { when.zero(); }
+  TimedEvent(Scheduler &sched, timed_handler_t action);
   operator bool() { return bool(when); }
   void set(const RealTime &);
   void set(const TimePeriod &);

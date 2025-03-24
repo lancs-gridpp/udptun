@@ -118,6 +118,7 @@ TCPEgress::Listener::Listener(TCPEgress &parent, int sock)
          std::bind(&Listener::handle_fd, this, std::placeholders::_1))
 {
   fdev.set(sock, EPOLLIN);
+  fdev.name(sformat("egress:%s:listen:%d", parent.name.c_str(), sock));
 }
 
 TCPEgress::Listener::~Listener()
@@ -136,6 +137,7 @@ TCPEgress::Connection::Connection(TCPEgress &parent, int sock)
   /* Get ready to receive immediately. */
   assert(sock >= 0);
   fdev.set(sock, EPOLLIN);
+  fdev.name(sformat("egress:%s:connection:%d", parent.name.c_str(), sock));
 }
 
 TCPEgress::Connection::~Connection()

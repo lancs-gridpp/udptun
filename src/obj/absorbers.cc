@@ -63,7 +63,7 @@ UDPAbsorber::UDPAbsorber(const std::string &name,
     sock(-1),
     sockev(sched, std::bind(&UDPAbsorber::sock_ready, this, std::placeholders::_1))
 {
-  // TODO
+  sockev.name(sformat("absorber:%s:descriptor", name.c_str()));
 }
 
 UDPAbsorber::~UDPAbsorber()

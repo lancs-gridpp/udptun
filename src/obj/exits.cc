@@ -74,7 +74,11 @@ Exit::Exit(const std::string &name,
     queue(std::string("egress:") + name,
           100 * 1024, quota, dir, std::bind(&IdleEvent::set, &upstream_event)),
     upstream_okay(false), downstream_okay(false),
-    emitter(emitter), destination(dest) { }
+    emitter(emitter), destination(dest)
+{
+  downstream_event.name(sformat("exit:%s:downstream", name.c_str()));
+  upstream_event.name(sformat("exit:%s:upstream", name.c_str()));
+}
 
 void Exit::activate()
 {
