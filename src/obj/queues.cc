@@ -34,9 +34,10 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <cassert>
+
 #include <filesystem>
 #include <fstream>
-#include <cassert>
 #include <functional>
 
 #include "payloads.hh"
@@ -172,7 +173,7 @@ void PayloadQueue::consume()
   /* Remove the head element if present. */
   auto pos = queue.begin();
   if (pos != queue.end())
-      queue.erase(pos);
+    queue.erase(pos);
 }
 
 void PayloadQueue::push(const void *base, std::size_t len)
