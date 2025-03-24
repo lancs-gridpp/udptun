@@ -178,7 +178,8 @@ void TCPIngress::try_connect()
     /* Perform a non-blocking connect. */
     int rc = connect(sock, ainf->ai_addr, ainf->ai_addrlen);
     if (rc < 0) {
-      switch (errno) {
+      int ec = errno;
+      switch (ec) {
       default:
         // TODO: Log error.
         /* Close the socket, and try the next address entry
@@ -232,7 +233,8 @@ void TCPIngress::try_send()
       ssize_t done = ::sendmsg(sock, &hdr, MSG_DONTWAIT | MSG_NOSIGNAL);
       upout_ready = false;
       if (done < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        int ec = errno;
+        if (ec == EAGAIN || ec == EWOULDBLOCK) {
           /* We can't send any more.  Tell the source we're blocked.
              Ensure we're told when we can send some more. */
           src.consumed(0);
