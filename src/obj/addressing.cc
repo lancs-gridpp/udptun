@@ -177,6 +177,7 @@ void AddressEvent::check()
     case EAI_ALLDONE:
       break;
     }
+    break;
   } while (true);
 
   int rc = gai_error(&data);
