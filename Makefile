@@ -51,6 +51,7 @@ udptun_obj += descriptor
 udptun_obj += idle
 udptun_obj += timed
 udptun_obj += fnexp
+udptun_obj += network
 udptun_lib += -lyaml-cpp
 
 test_binaries.cc += testpayload
