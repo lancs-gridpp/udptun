@@ -179,6 +179,7 @@ void Scheduler::poll()
         signal_handlers.erase(tpos);
         update_signal(signo);
       }
+      continue;
     }
     auto ptr = static_cast<DescriptorEvent *>(events[i].data.ptr);
     ptr->update(events[i].events);
