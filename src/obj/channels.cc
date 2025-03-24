@@ -92,6 +92,7 @@ bool Channel::consumed(std::size_t done)
   if (this->done == MAX_LABEL_BYTES + MAX_LENGTH_BYTES + current->size()) {
     queue.consume();
     current = nullptr;
+    queue.poke();
     return true;
   }
   return false;
