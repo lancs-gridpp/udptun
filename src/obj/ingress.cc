@@ -224,6 +224,7 @@ void TCPIngress::try_send()
     if (ok) {
       /* Send some or all of this data. */
       struct msghdr hdr;
+      memset(&hdr, 0, sizeof hdr); // prevents ENOBUFS
       hdr.msg_name = nullptr;
       hdr.msg_namelen = 0;
       hdr.msg_iov = iov.data();
