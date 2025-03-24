@@ -93,15 +93,11 @@ int Scheduler::timeout()
   RealTime now;
   now.now();
   RealTime first = table.begin()->first;
-  //std::cerr << "now=" << std::string(now)
-  //          << "; first=" << std::string(first) << std::endl;
   TimePeriod delay = first - now;
-  //std::cerr << "delay " << delay.amount << " unit " << delay.unit << std::endl;
   delay.clamp_nonnegative();
   /* Clamp actual result in milliseconds to INT_MAX or less. */
   uintmax_t res = delay.to_milliseconds();
   if (res > INT_MAX) res = INT_MAX;
-  //std::cerr << "timeout is " << res << std::endl;
   return res;
 }
 
