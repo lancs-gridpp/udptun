@@ -59,9 +59,11 @@ void Emitter::handle_fd(uint32_t events)
   ready = true;
 
   /* Prime each user to be able to send. */
-  for (auto &ptr : users)
+  for (auto pos = users.begin(); pos != users.end(); pos = users.begin()) {
+    auto ptr = *pos;
+    users.erase(pos);
     ptr->set();
-  users.clear();
+  }
 }
 
 Emitter::Emitter(Scheduler &sched, const YAML::Node &cfg)
