@@ -53,6 +53,7 @@
 #include "destruction.hh"
 #include "labels.hh"
 #include "exits.hh"
+#include "network.hh"
 
 void TCPEgress::Listener::handle_fd(uint32_t)
 {
@@ -254,7 +255,10 @@ void TCPEgress::activate()
     if (bind(sock, iter->ai_addr, iter->ai_addrlen) != 0) {
       int ec = errno;
       close(sock);
-      throw std::system_error(ec, std::system_category(), "bind");
+      throw std::system_error(ec, std::system_category(),
+                              sformat("bind(%s)",
+                                      to_str(iter->ai_addr,
+                                             iter->ai_addrlen).c_str()));
     }
 
     if (listen(sock, 5) != 0) {
