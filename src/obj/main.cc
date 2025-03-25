@@ -211,8 +211,8 @@ int main(int argc, const char *const *argv)
     /* Prepare to create indices of egresses and absorber.  These are
        retained within a reset iteration, but discarded before the
        next. */
-    std::map<std::string, std::shared_ptr<Absorber>> absorber_index;
     std::map<std::string, std::shared_ptr<Egress>> egress_index;
+    std::map<std::string, std::shared_ptr<Absorber>> absorber_index;
     {
       if (root["ingress"]) {
         const auto &ingress_root = root["ingress"];
