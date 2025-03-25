@@ -86,3 +86,24 @@ bool length_to_bytes(unsigned len, unsigned char *buf,
   push_onto(vec, buf + (MAX_LENGTH_BYTES - m), m);
   return true;
 }
+
+const unsigned char *decode_message(labelset_t &labels, std::size_t &pktlen,
+                                    const unsigned char *base, std::size_t got)
+{
+  /* Get the datagram length, if available. */
+  if (got < MAX_LABEL_BYTES + MAX_LENGTH_BYTES) return nullptr;
+  pktlen = base[MAX_LABEL_BYTES];
+  pktlen <<= 8;
+  pktlen |= base[MAX_LABEL_BYTES + 1];
+
+  /* Do we have a complete packet? */
+  if (got < MAX_LABEL_BYTES + MAX_LENGTH_BYTES + pktlen) return nullptr;
+
+  /* Extract the labels. */
+  labels = 0;
+  for (unsigned i = 0; i < MAX_LABEL_BYTES; i++)
+    labels |= base[i] << (8 * i);
+
+  /* Return the start of the payload. */
+  return base + (MAX_LABEL_BYTES + MAX_LENGTH_BYTES);
+}

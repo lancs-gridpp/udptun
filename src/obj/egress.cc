@@ -151,33 +151,33 @@ TCPEgress::Connection::~Connection()
 
 bool TCPEgress::Connection::process()
 {
-  /* We must have enough bytes for the header. */
-  if (len < 6) return false;
+  /* Do we have a full packet? */
+  labelset_t labels;
+  std::size_t pktlen;
+  const unsigned char *base = decode_message(labels, pktlen, buf, len);
+  if (!base) return false; // Packet is incomplete.
 
-  /* If we have the header, we know how many additional bytes form the
-     payload. */
-  unsigned expected = (buf[4] << 8) | buf[5];
-  if (len < 6 + expected) return false;
-
-  /* Deliver the payload to any indicated exit. */
-  for (unsigned lbl = 0; lbl < 32; lbl++) {
+  /* Get the union of all exits indicated by labels. */
+  std::set<Exit *> chosen_exits;
+  for (unsigned lbl = 0; lbl < MAX_LABELS; lbl++) {
     /* Is the label present in the set? */
-    if ((buf[lbl / 8] & (1ul << (lbl % 8))) == 0)
+    if ((labels & (UINT64_C(1) << lbl)) == 0)
       continue;
-
     /* Is an exit defined for this label? */
     auto pos = parent.exits.find(lbl);
     if (pos == parent.exits.end())
       continue;
-
-    for (auto ex : pos->second)
-      ex->deliver(buf + 5, expected - 6);
+    for (auto ptr : pos->second)
+      chosen_exits.insert(ptr.get());
   }
 
+  /* Pass the payload on to the union. */
+  for (auto ptr : chosen_exits)
+    ptr->deliver(base, pktlen);
+
   /* Consume the header and payload. */
-  auto amount = 6 + expected;
-  memmove(buf, buf + amount, len - amount);
-  len -= amount;
+  len = (buf + len) - (base + pktlen);
+  memmove(buf, base + pktlen, len);
   return true;
 }
 
@@ -198,6 +198,7 @@ void TCPEgress::Connection::handle_fd(uint32_t)
     /* Be ready to receive more. */
     fdev.set(sock, EPOLLIN);
   }
+  len += rc;
 
   /* Deliver any complete payloads to the exits, and clear the data
      out. */
@@ -270,6 +271,10 @@ void TCPEgress::activate()
     assert(sock >= 0);
     listeners.emplace_back(*this, sock);
   }
+
+  for (auto &ent : exits)
+    for (auto &ptr : ent.second)
+      ptr->activate();
 }
 
 Egress *make_egress(Scheduler &sched,

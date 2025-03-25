@@ -62,4 +62,7 @@ bool length_to_bytes(unsigned len, unsigned char *,
                      std::size_t done, std::size_t pos,
                      std::vector<struct iovec> &);
 
+const unsigned char *decode_message(labelset_t &, std::size_t &pktlen,
+                                    const unsigned char *, std::size_t got);
+
 #endif
