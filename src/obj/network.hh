@@ -41,6 +41,9 @@
 
 #include <string>
 
+std::string af_to_str(int);
+std::string socktype_to_str(int);
+std::string proto_to_str(int);
 std::string to_str(const struct sockaddr *addr, socklen_t addrlen);
 
 #endif

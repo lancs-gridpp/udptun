@@ -41,6 +41,44 @@
 #include "network.hh"
 #include "formatting.hh"
 
+std::string proto_to_str(int proto)
+{
+  struct protoent *ent = getprotobynumber(proto);
+  if (ent == nullptr) return "proto?";
+  return ent->p_name;
+}
+
+std::string socktype_to_str(int type)
+{
+  switch (type) {
+  case SOCK_STREAM:
+    return "STREAM";
+
+  case SOCK_DGRAM:
+    return "DGRAM";
+
+  default:
+    return "SOCK?";
+  }
+}
+
+std::string af_to_str(int domain)
+{
+  switch (domain) {
+  case AF_INET:
+    return "INET";
+
+  case AF_INET6:
+    return "INET6";
+
+  case AF_UNIX:
+    return "UNIX";
+
+  default:
+    return "AF?";
+  }
+}
+
 std::string to_str(const struct sockaddr *addr, socklen_t addrlen)
 {
   char host[100], serv[100];

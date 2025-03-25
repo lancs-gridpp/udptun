@@ -52,6 +52,7 @@
 
 #include "destruction.hh"
 #include "formatting.hh"
+#include "network.hh"
 #include "emitters.hh"
 
 void Emitter::handle_fd(uint32_t events)
@@ -96,7 +97,8 @@ void Emitter::activate()
                        &hints, &info);
   if (rc < 0)
     throw std::system_error(errno, std::system_category(),
-                            sformat("getaddrinfo(%s)", host.c_str()));
+                            sformat("getaddrinfo(%s:%s)",
+                                    host.c_str(), srv.c_str()));
 
   /* Try to make a socket out of each offered entry, until one works.
      Store up the errors of the others, but only throw an exception if
@@ -127,8 +129,11 @@ void Emitter::activate()
   for (auto ent : bad) {
     auto sai = ent.first;
     auto &prb = ent.second;
-    msg << " [" << sai->ai_family << ", " << sai->ai_protocol << ", "
-        << prb.first << ": " << ::strerror(prb.second) << "]";
+    msg << " [" << af_to_str(sai->ai_family) << ", "
+        << proto_to_str(sai->ai_protocol) << ", "
+        << to_str(sai->ai_addr, sai->ai_addrlen) << ", "
+        << prb.first << ":" << strerrorname_np(prb.second)
+        << " (" << ::strerror(prb.second) << ")]";
   }
   throw std::runtime_error(msg.str());
 }
