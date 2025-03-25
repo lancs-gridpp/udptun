@@ -83,6 +83,7 @@ Exit::Exit(const std::string &name,
 void Exit::activate()
 {
   emitter->activate();
+  queue.poke();
 }
 
 void Exit::check()
@@ -109,6 +110,7 @@ void Exit::check()
 #endif
     downstream_okay = false;
     emitter->notify(downstream_event);
+    queue.poke();
     return;
 
     // TODO: Other error codes?
