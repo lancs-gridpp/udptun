@@ -69,6 +69,7 @@
 #include "channels.hh"
 #include "formatting.hh"
 #include "fnexp.hh"
+#include "logging.hh"
 
 static sig_atomic_t reload = 0, quit = 0;
 
@@ -108,6 +109,7 @@ static void populate(std::map<std::string, std::shared_ptr<T>> &dst,
 
 int main(int argc, const char *const *argv)
 {
+  Logger log("udptun/main", "main");
   /* Arguments are just filename configurations. */
   std::vector<std::string> config_filenames;
   config_filenames.reserve(argc - 1);
@@ -187,6 +189,9 @@ int main(int argc, const char *const *argv)
     /* (Re-)load configuration. */
     std::cerr << "reading config" << std::endl;
     YAML::Node root = config.get();
+
+    Logging::configure(root["logging"]);
+
     std::filesystem::path queuedir("/var/spool/udptun");
     if (root["queues"]) {
       const auto &queues_root = root["queues"];
@@ -202,6 +207,8 @@ int main(int argc, const char *const *argv)
 
     /* Set the quota from configuration. */
     // TODO
+
+    log.info("starting");
 
     std::filesystem::path egress_qdir = queuedir / "egress";
     std::filesystem::path ingress_qdir = queuedir / "ingress";

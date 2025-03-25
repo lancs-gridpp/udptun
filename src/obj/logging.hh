@@ -34,53 +34,43 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef realtime_included
-#define realtime_included
+#ifndef logging_included
+#define logging_included
+
+#include <yaml-cpp/yaml.h>
 
 #include <string>
-#include <chrono>
+#include <map>
+#include <fstream>
+#include <sstream>
+#include <filesystem>
 
-struct timeval;
-struct timespec;
+#include "logger.hh"
 
-typedef unsigned long long realtime_t;
+typedef std::map<std::filesystem::path, std::ofstream> log_filemap_t;
 
-class TimePeriod;
-
-class RealTime {
-  realtime_t at;
-
-public:
-  RealTime() { }
-  RealTime(const struct timeval &at);
-  void now();
-  void zero();
-  RealTime &operator +=(const TimePeriod &);
-  RealTime &operator -=(const TimePeriod &);
-  friend bool operator !=(const RealTime &lhs, const RealTime &rhs);
-  friend bool operator <(const RealTime &lhs, const RealTime &rhs);
-  friend TimePeriod operator -(const RealTime &lhs, const RealTime &rhs);
-  operator bool() const;
-
-  friend bool operator ==(const RealTime &lhs, const RealTime &rhs) {
-    return !(lhs != rhs);
-  }
-
-  friend bool operator >(const RealTime &lhs, const RealTime &rhs) {
-    return rhs < lhs;
-  }
-
-  friend bool operator <=(const RealTime &lhs, const RealTime &rhs) {
-    return !(lhs > rhs);
-  }
-
-  friend bool operator >=(const RealTime &lhs, const RealTime &rhs) {
-    return !(lhs < rhs);
-  }
-
-  operator std::string();
-  operator std::chrono::system_clock::time_point();
+struct LoggingContext {
+  Logger::level_t level;
+  std::ostream *out;
+  std::map<std::string, LoggingContext> subs;
+  LoggingContext();
+  void set(const YAML::Node &cfg, log_filemap_t &out_table, LoggingContext *par);
 };
 
+
+class Logging {
+  static Logging instance;
+  friend class Logger;
+  void configure_in(const YAML::Node &);
+  unsigned serial;
+  log_filemap_t out_table;
+  LoggingContext ctx_root;
+
+  Logging();
+  LoggingContext &find(const std::vector<std::string> &parts);
+
+public:
+  static void configure(const YAML::Node &cfg) { instance.configure_in(cfg); }
+};
 
 #endif

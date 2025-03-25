@@ -48,6 +48,11 @@ RealTime::RealTime(const struct timeval &at)
   this->at = at.tv_sec * 1000000000ull + at.tv_usec;
 }
 
+RealTime::operator std::chrono::system_clock::time_point()
+{
+  return std::chrono::system_clock::time_point{std::chrono::nanoseconds{at}};
+}
+
 void RealTime::now()
 {
   struct timeval at;
