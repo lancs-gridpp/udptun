@@ -44,26 +44,30 @@
 #include <yaml-cpp/yaml.h>
 
 #include "descriptor.hh"
-#include "idle.hh"
 #include "destinations.hh"
 
-class Emitter {
+struct Emitter {
+  typedef std::function<void()> user_t;
+
+private:
   const bool ipv4, ipv6;
   const std::string host, srv;
   int sock, family, protocol;
   bool ready;
   DescriptorEvent fdev;
 
-  std::set<IdleEvent *> users;
+  std::set<const user_t *> users;
 
   void handle_fd(uint32_t);
+  void prime_all();
 
 public:
   Emitter(Scheduler &sched, const YAML::Node &);
   void activate();
+  operator bool() { return ready; }
   int send(const void *buf, size_t len, Destination &, int flags);
-  void notify(IdleEvent &user);
-  void forget(IdleEvent &user);
+  void notify(const user_t &user);
+  void forget(const user_t &user);
   ~Emitter();
 };
 

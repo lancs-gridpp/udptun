@@ -55,16 +55,21 @@
 #include "network.hh"
 #include "emitters.hh"
 
-void Emitter::handle_fd(uint32_t events)
+void Emitter::prime_all()
 {
-  ready = true;
-
+  assert(ready);
   /* Prime each user to be able to send. */
   for (auto pos = users.begin(); pos != users.end(); pos = users.begin()) {
     auto ptr = *pos;
     users.erase(pos);
-    ptr->set();
+    (*ptr)();
   }
+}
+
+void Emitter::handle_fd(uint32_t events)
+{
+  ready = true;
+  prime_all();
 }
 
 Emitter::Emitter(Scheduler &sched, const YAML::Node &cfg)
@@ -119,6 +124,7 @@ void Emitter::activate()
     this->sock = sock;
     this->family = iter->ai_family;
     this->protocol = iter->ai_protocol;
+    fdev.set(sock, EPOLLOUT);
     return;
   }
 
@@ -176,10 +182,8 @@ int Emitter::send(const void *buf, size_t len, Destination &dst, int flags)
 
 Emitter::~Emitter()
 {
-  /* Cancel users invoking us, although this set should be empty by
-     now. */
-  for (auto &ptr : users)
-    ptr->cancel();
+  /* We shouldn't have any users by now. */
+  assert(users.empty());
 
   /* Make sure we receive no more descriptor events, before closing
      the socket. */
@@ -188,14 +192,17 @@ Emitter::~Emitter()
     close(sock);
 }
 
-void Emitter::notify(IdleEvent &user)
+void Emitter::notify(const user_t &user)
 {
   users.insert(&user);
-  if (!ready)
+  if (sock < 0) return;
+  if (ready)
+    prime_all();
+  else
     fdev.set(sock, EPOLLOUT);
 }
 
-void Emitter::forget(IdleEvent &user)
+void Emitter::forget(const user_t &user)
 {
   users.erase(&user);
   if (users.empty())

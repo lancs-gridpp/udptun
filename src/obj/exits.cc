@@ -36,6 +36,8 @@
 
 #include <unistd.h>
 
+#include <cassert>
+
 #include <functional>
 #include <stdexcept>
 
@@ -69,15 +71,13 @@ Exit::Exit(const std::string &name,
            std::shared_ptr<Emitter> emitter,
            std::shared_ptr<Destination> dest)
   : name(name),
-    downstream_event(sched, std::bind(&Exit::downstream_ready, this)),
-    upstream_event(sched, std::bind(&Exit::upstream_ready, this)),
+    ready_event(sched, std::bind(&Exit::try_to_send, this)),
     queue(std::string("egress:") + name,
-          100 * 1024, quota, dir, std::bind(&IdleEvent::set, &upstream_event)),
-    upstream_okay(false), downstream_okay(false),
+          100 * 1024, quota, dir, std::bind(&Exit::check, this)),
+    emitter_user(std::bind(&Exit::check, this)),
     emitter(emitter), destination(dest)
 {
-  downstream_event.name(sformat("exit:%s:downstream", name.c_str()));
-  upstream_event.name(sformat("exit:%s:upstream", name.c_str()));
+  ready_event.name(sformat("exit:%s", name.c_str()));
 }
 
 void Exit::activate()
@@ -88,53 +88,61 @@ void Exit::activate()
 
 void Exit::check()
 {
-  if (!upstream_okay) return;
-  if (!downstream_okay) {
-    /* Make sure we're notified when ready to send. */
-    emitter->notify(downstream_event);
+  if (!queue.peek()) return;
+  if (!*emitter) {
+    emitter->notify(emitter_user);
     return;
   }
+
+  /* We'll try sending on the next poll. */
+  ready_event.set();
+}
+
+void Exit::try_to_send()
+{
+  assert(*emitter);
   Payload *payload = queue.peek();
-  if (!payload) return;
+  assert(payload);
 
   /* Try to send the payload. */
   auto rc = emitter->send(payload->base(),
                           payload->size(), *destination.get(), 0);
   switch (rc) {
   case 0:
+    /* The payload was sent successfully.  Tell the queue not to keep
+       it. */
     queue.consume();
-    // fall-through
+
+    /* Do we have any more payloads? */
+    if (queue.peek())
+      /* We're ready to send another.  Tell the emitter to notify us
+         when it's ready. */
+      emitter->notify(emitter_user);
+    return;
+
   case EWOULDBLOCK:
 #if EAGAIN != EWOULDBLOCK
   case EAGAIN:
 #endif
-    downstream_okay = false;
-    emitter->notify(downstream_event);
-    queue.poke();
+    emitter->notify(emitter_user);
     return;
 
-    // TODO: Other error codes?
+  case EBADF:
+    /* We should never be using the emitter if it's FD is not set
+       up. */
+    throw std::runtime_error(sformat("unreachable %s:%d", __FILE__, __LINE__));
+
+  default:
+    throw std::system_error(rc, std::system_category(), "emitter::send()");
   }
 }
 
 Exit::~Exit()
 {
-  emitter->forget(downstream_event);
+  emitter->forget(emitter_user);
 }
 
 void Exit::deliver(const void *base, std::size_t len)
 {
   queue.push(base, len);
-}
-
-void Exit::downstream_ready()
-{
-  downstream_okay = true;
-  check();
-}
-
-void Exit::upstream_ready()
-{
-  upstream_okay = true;
-  check();
 }

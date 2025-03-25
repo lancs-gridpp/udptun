@@ -56,18 +56,15 @@ class Destination;
 
 class Exit {
   const std::string name;
-  IdleEvent downstream_event;
-  IdleEvent upstream_event;
+  IdleEvent ready_event;
   PayloadQueue queue;
 
-  void downstream_ready();
-  void upstream_ready();
-  bool upstream_okay, downstream_okay;
-
+  std::function<void()> emitter_user;
   std::shared_ptr<Emitter> emitter;
   std::shared_ptr<Destination> destination;
 
   void check();
+  void try_to_send();
 
 public:
   Exit(const std::string &name,
