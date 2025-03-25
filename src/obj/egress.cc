@@ -194,16 +194,18 @@ void TCPEgress::Connection::handle_fd(uint32_t)
 
     /* Make sure this entry gets cleaned out. */
     parent.idev.set();
+    return;
   } else {
     /* Be ready to receive more. */
     fdev.set(sock, EPOLLIN);
-  }
-  len += rc;
 
-  /* Deliver any complete payloads to the exits, and clear the data
-     out. */
-  while (process())
-    ;
+    len += rc;
+
+    /* Deliver any complete payloads to the exits, and clear the data
+       out. */
+    while (process())
+      ;
+  }
 }
 
 TCPEgress::TCPEgress(const std::string &name,
