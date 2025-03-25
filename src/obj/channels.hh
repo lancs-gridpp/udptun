@@ -44,7 +44,7 @@
 #include "streamer.hh"
 #include "queues.hh"
 #include "idle.hh"
-#include "labels.hh"
+#include "messages.hh"
 
 class Scheduler;
 class Payload;

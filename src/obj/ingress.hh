@@ -47,7 +47,7 @@
 
 #include "descriptor.hh"
 #include "timed.hh"
-#include "labels.hh"
+#include "messages.hh"
 #include "addrevent.hh"
 #include "streamer.hh"
 

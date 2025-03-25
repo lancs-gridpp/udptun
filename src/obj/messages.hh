@@ -34,8 +34,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef labels_included
-#define labels_included
+#ifndef messages_included
+#define messages_included
 
 #include <cstdint>
 

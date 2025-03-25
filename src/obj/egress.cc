@@ -51,7 +51,7 @@
 #include "egress.hh"
 #include "formatting.hh"
 #include "destruction.hh"
-#include "labels.hh"
+#include "messages.hh"
 #include "exits.hh"
 #include "network.hh"
 

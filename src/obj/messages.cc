@@ -41,7 +41,7 @@
 
 #include <algorithm>
 
-#include "labels.hh"
+#include "messages.hh"
 
 void push_onto(std::vector<struct iovec> &vec, unsigned char *base,
                std::size_t len)
