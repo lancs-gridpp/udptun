@@ -182,3 +182,17 @@ Emitter::~Emitter()
   if (sock >= 0)
     close(sock);
 }
+
+void Emitter::notify(IdleEvent &user)
+{
+  users.insert(&user);
+  if (!ready)
+    fdev.set(sock, EPOLLOUT);
+}
+
+void Emitter::forget(IdleEvent &user)
+{
+  users.erase(&user);
+  if (users.empty())
+    fdev.cancel();
+}

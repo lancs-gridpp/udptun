@@ -62,8 +62,8 @@ public:
   Emitter(Scheduler &sched, const YAML::Node &);
   void activate();
   int send(const void *buf, size_t len, Destination &, int flags);
-  void notify(IdleEvent &user) { users.insert(&user); }
-  void forget(IdleEvent &user) { users.erase(&user); }
+  void notify(IdleEvent &user);
+  void forget(IdleEvent &user);
   ~Emitter();
 };
 
