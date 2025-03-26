@@ -182,7 +182,7 @@ static std::vector<std::string> split_name(const std::string &name)
 {
   std::vector<std::string> result;
   std::size_t last = 0, pos;
-  while ((pos = name.find("/", last)) != std::string::npos) {
+  while ((pos = name.find(".", last)) != std::string::npos) {
     if (pos > last)
       result.push_back(name.substr(last, pos - last));
     last = pos + 1;
