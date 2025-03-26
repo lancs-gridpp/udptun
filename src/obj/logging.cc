@@ -206,7 +206,7 @@ Logger::level_t Logger::level()
   return ctx->level;
 }
 
-static void log_time(std::stringstream &out)
+static void log_time(std::ostream &out)
 {
   auto tp = std::chrono::system_clock::now();
   std::time_t tt = std::chrono::system_clock::to_time_t(tp);
