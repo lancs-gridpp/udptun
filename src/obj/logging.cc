@@ -73,8 +73,17 @@ static std::string level_name(Logger::level_t lvl)
   if (lvl == Logger::INFO) return "INFO";
   if (lvl > Logger::DEBUG)
     return level_midname("DEBUG", Logger::DEBUG, lvl);
-  assert(lvl == Logger::DEBUG);
-  return "DEBUG";
+  if (lvl == Logger::DEBUG) return "DEBUG";
+  if (lvl > Logger::TRACE)
+    return level_midname("TRACE", Logger::TRACE, lvl);
+  if (lvl == Logger::TRACE) return "TRACE";
+  if (lvl > Logger::DETAIL)
+    return level_midname("DETAIL", Logger::DETAIL, lvl);
+  if (lvl == Logger::DETAIL) return "DETAIL";
+  if (lvl > Logger::ALL)
+    return level_midname("ALL", Logger::ALL, lvl);
+  assert(lvl == Logger::ALL);
+  return "ALL";
 }
 
 LoggingContext::LoggingContext() : level(Logger::INFO), out(&std::cerr) { }
@@ -86,6 +95,9 @@ static const std::map<std::string, Logger::level_t> level_names = {
   { "warn", Logger::WARN },
   { "info", Logger::INFO },
   { "debug", Logger::DEBUG },
+  { "trace", Logger::TRACE },
+  { "detail", Logger::DETAIL },
+  { "all", Logger::ALL },
 };
 
 static bool parse_level(Logger::level_t &lvl, const std::string &txt)

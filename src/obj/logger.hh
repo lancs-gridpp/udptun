@@ -50,12 +50,15 @@ class LoggingContext;
 struct Logger {
   typedef unsigned level_t;
 
-  static constexpr level_t SILENT = 500;
-  static constexpr level_t CRITICAL = 400;
-  static constexpr level_t ERROR = 300;
-  static constexpr level_t WARN = 200;
-  static constexpr level_t INFO = 100;
-  static constexpr level_t DEBUG = 0;
+  static constexpr level_t SILENT = 800;
+  static constexpr level_t CRITICAL = 700;
+  static constexpr level_t ERROR = 600;
+  static constexpr level_t WARN = 500;
+  static constexpr level_t INFO = 400;
+  static constexpr level_t DEBUG = 300;
+  static constexpr level_t TRACE = 200;
+  static constexpr level_t DETAIL = 100;
+  static constexpr level_t ALL = 0;
 
   Logger(const char *name, const std::string &comp);
 
@@ -63,21 +66,10 @@ struct Logger {
 
   typedef std::function<void(std::stringstream &)> messenger_t;
   void report(level_t, messenger_t);
-  void critical(messenger_t m) { report(CRITICAL, m); }
-  void error(messenger_t m) { report(ERROR, m); }
-  void warn(messenger_t m) { report(WARN, m); }
-  void info(messenger_t m) { report(INFO, m); }
-  void debug(messenger_t m) { report(DEBUG, m); }
 
   void report(level_t lvl, const char *fmt) {
     report(lvl, [&fmt](std::stringstream &out) { out << fmt; });
   }
-
-  void critical(const char *fmt) { report(CRITICAL, fmt); }
-  void error(const char *fmt) { report(ERROR, fmt); }
-  void warn(const char *fmt) { report(WARN, fmt); }
-  void info(const char *fmt) { report(INFO, fmt); }
-  void debug(const char *fmt) { report(DEBUG, fmt); }
 
   template <typename ...Args>
   void report(level_t lvl, const char *fmt, Args... args) {
@@ -86,30 +78,45 @@ struct Logger {
     });
   }
 
+  void critical(messenger_t m) { report(CRITICAL, m); }
+  void critical(const char *fmt) { report(CRITICAL, fmt); }
   template <typename ...Args>
-  void critical(const char *fmt, Args... args) {
-    report(CRITICAL, fmt, args...);
-  }
+  void critical(const char *fmt, Args... args) { report(CRITICAL, fmt, args...); }
 
+  void error(messenger_t m) { report(ERROR, m); }
+  void error(const char *fmt) { report(ERROR, fmt); }
   template <typename ...Args>
-  void error(const char *fmt, Args... args) {
-    report(ERROR, fmt, args...);
-  }
+  void error(const char *fmt, Args... args) { report(ERROR, fmt, args...); }
 
+  void warn(messenger_t m) { report(WARN, m); }
+  void warn(const char *fmt) { report(WARN, fmt); }
   template <typename ...Args>
-  void warn(const char *fmt, Args... args) {
-    report(WARN, fmt, args...);
-  }
+  void warn(const char *fmt, Args... args) { report(WARN, fmt, args...); }
 
+  void info(messenger_t m) { report(INFO, m); }
+  void info(const char *fmt) { report(INFO, fmt); }
   template <typename ...Args>
-  void info(const char *fmt, Args... args) {
-    report(INFO, fmt, args...);
-  }
+  void info(const char *fmt, Args... args) { report(INFO, fmt, args...); }
 
+  void debug(messenger_t m) { report(DEBUG, m); }
+  void debug(const char *fmt) { report(DEBUG, fmt); }
   template <typename ...Args>
-  void debug(const char *fmt, Args... args) {
-    report(DEBUG, fmt, args...);
-  }
+  void debug(const char *fmt, Args... args) { report(DEBUG, fmt, args...); }
+
+  void trace(messenger_t m) { report(TRACE, m); }
+  void trace(const char *fmt) { report(TRACE, fmt); }
+  template <typename ...Args>
+  void trace(const char *fmt, Args... args) { report(TRACE, fmt, args...); }
+
+  void detail(messenger_t m) { report(DETAIL, m); }
+  void detail(const char *fmt) { report(DETAIL, fmt); }
+  template <typename ...Args>
+  void detail(const char *fmt, Args... args) { report(DETAIL, fmt, args...); }
+
+  void all(messenger_t m) { report(ALL, m); }
+  void all(const char *fmt) { report(ALL, fmt); }
+  template <typename ...Args>
+  void all(const char *fmt, Args... args) { report(ALL, fmt, args...); }
 
 private:
   std::vector<std::string> name;
