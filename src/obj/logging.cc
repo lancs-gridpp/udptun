@@ -36,6 +36,7 @@
 
 #include <cassert>
 #include <cctype>
+#include <cinttypes>
 
 #include <chrono>
 #include <iostream>
@@ -44,7 +45,6 @@
 #include "logging.hh"
 #include "logger.hh"
 #include "fnexp.hh"
-#include "realtime.hh"
 
 static std::string level_midname(const char *pfx,
                                  Logger::level_t base, Logger::level_t lvl)
@@ -196,10 +196,21 @@ Logger::level_t Logger::level()
 
 static void log_time(std::stringstream &out)
 {
-  RealTime now;
-  now.now();
-  std::chrono::system_clock::time_point tp{now};
-  out << tp;
+  auto tp = std::chrono::system_clock::now();
+  std::time_t tt = std::chrono::system_clock::to_time_t(tp);
+
+  /* We lost fractions of a second in the conversion, so convert back,
+     and subtract. */
+  auto tp0 = std::chrono::system_clock::from_time_t(tt);
+  uint_fast32_t ms = std::chrono::duration<double, std::micro>(tp - tp0).count();
+
+  /* Convert to a calendar time in UTC, then format, then append the
+     microseconds. */
+  std::tm mytm = *std::gmtime(&tt);
+  char buf[150];
+  auto rc = strftime(buf, sizeof buf, "%FT%T", &mytm);
+  snprintf(buf + rc, sizeof buf - rc, ".%06" PRIuFAST32 "Z", ms);
+  out << buf;
 }
 
 void Logger::report(level_t lvl, messenger_t msgr)
