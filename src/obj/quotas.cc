@@ -40,7 +40,7 @@
 
 #include "quotas.hh"
 
-Quota::Quota() : total(0), max(0) { }
+Quota::Quota() : log("udptun.quota", "quota"), total(0), max(0) { }
 
 void Quota::set(size_t sz)
 {

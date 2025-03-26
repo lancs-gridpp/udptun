@@ -45,6 +45,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include "logger.hh"
 #include "descriptor.hh"
 #include "timed.hh"
 #include "messages.hh"
@@ -53,6 +54,7 @@
 
 class TCPIngress : public Ingress {
   const std::string name;
+  Logger log;
   const bool ipv4, ipv6;
   const std::string host;
   const std::string srv;

@@ -70,7 +70,7 @@ Exit::Exit(const std::string &name,
            const std::filesystem::path &dir,
            std::shared_ptr<Emitter> emitter,
            std::shared_ptr<Destination> dest)
-  : name(name),
+  : name(name), log("udptun.egress.exit", std::string("egress:") + name),
     ready_event(sched, std::bind(&Exit::try_to_send, this)),
     queue(std::string("egress:") + name,
           100 * 1024, quota, dir, std::bind(&Exit::check, this)),

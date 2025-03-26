@@ -48,7 +48,8 @@
 #include "formatting.hh"
 
 Destination::Destination(const std::string &name, const YAML::Node &cfg)
-  : name(name)
+  : name(name),
+    log("udptun.egress.destination", std::string("destination:") + name)
 {
   const bool ipv4 = cfg["ipv4"].as<bool>("true");
   const bool ipv6 = cfg["ipv6"].as<bool>("true");

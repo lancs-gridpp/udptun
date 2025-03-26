@@ -45,6 +45,7 @@
 #include "queues.hh"
 #include "idle.hh"
 #include "messages.hh"
+#include "logger.hh"
 
 class Scheduler;
 class Payload;
@@ -52,6 +53,7 @@ class Quota;
 
 class Channel : Streamer {
   const std::string name;
+  Logger log;
   std::shared_ptr<Ingress> ingress;
   const labelset_t labels;
   IdleEvent queue_event;

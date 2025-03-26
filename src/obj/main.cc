@@ -109,7 +109,7 @@ static void populate(std::map<std::string, std::shared_ptr<T>> &dst,
 
 int main(int argc, const char *const *argv)
 {
-  Logger log("udptun/main", "main");
+  Logger log("udptun.main", "main");
   /* Arguments are just filename configurations. */
   std::vector<std::string> config_filenames;
   config_filenames.reserve(argc - 1);

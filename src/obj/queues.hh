@@ -44,6 +44,7 @@
 #include <fstream>
 
 #include "quotas.hh"
+#include "logger.hh"
 
 class Payload;
 
@@ -52,6 +53,7 @@ struct PayloadQueue {
 
 private:
   const std::string name;
+  Logger log;
   const std::filesystem::path dir;
   const std::size_t max_mem;
   Quota &quota;

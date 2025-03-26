@@ -221,7 +221,7 @@ void Scheduler::signal_mask(const sigset_t &sigmsk)
   this->sigmsk = sigmsk;
 }
 
-Scheduler::Scheduler() : epfd(-1), sigfd(-1)
+Scheduler::Scheduler() : log("scheduler", "scheduler"), epfd(-1), sigfd(-1)
 {
   if (sigemptyset(&sigmsk) != 0)
     throw std::system_error(errno, std::system_category(), "sigemptyset(sigmsk)");

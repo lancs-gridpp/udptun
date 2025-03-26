@@ -43,6 +43,8 @@
 #include <set>
 #include <functional>
 
+#include "logger.hh"
+
 struct Quota {
   typedef std::uintmax_t size_t;
   typedef std::uintmax_t epochtime_t;
@@ -56,6 +58,7 @@ struct Quota {
   void oldest(const user_t &, epochtime_t);
 
 private:
+  Logger log;
   size_t total, max;
   struct Data {
     size_t amount;

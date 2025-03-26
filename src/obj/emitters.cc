@@ -73,7 +73,8 @@ void Emitter::handle_fd(uint32_t events)
 }
 
 Emitter::Emitter(Scheduler &sched, const YAML::Node &cfg)
-  : ipv4(cfg ? cfg["ipv4"].as<bool>("true") : true),
+  : log("udptun.egress.emitter", "emitter"),
+    ipv4(cfg ? cfg["ipv4"].as<bool>("true") : true),
     ipv6(cfg ? cfg["ipv6"].as<bool>("true") : true),
     host(cfg ? cfg["host"].as<std::string>("localhost")
          : std::string("localhost")),

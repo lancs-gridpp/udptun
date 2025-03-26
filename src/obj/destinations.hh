@@ -45,8 +45,11 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include "logger.hh"
+
 class Destination {
   const std::string name;
+  Logger log;
 
   class Key {
     const int family, protocol;

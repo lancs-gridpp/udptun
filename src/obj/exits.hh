@@ -49,6 +49,7 @@
 #include "idle.hh"
 #include "payloads.hh"
 #include "queues.hh"
+#include "logger.hh"
 
 class Emitter;
 class Quota;
@@ -56,6 +57,7 @@ class Destination;
 
 class Exit {
   const std::string name;
+  Logger log;
   IdleEvent ready_event;
   PayloadQueue queue;
 

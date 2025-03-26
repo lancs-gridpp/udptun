@@ -53,7 +53,7 @@ TCPIngress::TCPIngress(const std::string &name,
                        Scheduler &sched,
                        AddressManager &addrmgr,
                        const YAML::Node &cfg)
-  : name(name),
+  : name(name), log("udptun.ingress.tunnel.tcp", std::string("ingress:") + name),
     ipv4(cfg["ipv4"].as<bool>("true")),
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),

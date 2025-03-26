@@ -45,6 +45,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include "descriptor.hh"
+#include "logger.hh"
 
 struct Absorber {
   virtual void activate() = 0;
@@ -55,6 +56,7 @@ class Channel;
 
 class UDPAbsorber : public Absorber {
   const std::string name;
+  Logger log;
   const bool ipv4, ipv6;
   const std::string host, srv;
   const std::set<std::shared_ptr<Channel>> channels;

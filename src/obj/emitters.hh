@@ -43,6 +43,7 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include "logger.hh"
 #include "descriptor.hh"
 #include "destinations.hh"
 
@@ -50,6 +51,7 @@ struct Emitter {
   typedef std::function<void()> user_t;
 
 private:
+  Logger log;
   const bool ipv4, ipv6;
   const std::string host, srv;
   int sock, family, protocol;

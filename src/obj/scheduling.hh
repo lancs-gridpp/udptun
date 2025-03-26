@@ -44,6 +44,7 @@
 #include <vector>
 
 #include "priority.hh"
+#include "logger.hh"
 
 class Event;
 class IdleEvent;
@@ -53,6 +54,7 @@ class SignalEvent;
 class RealTime;
 
 class Scheduler {
+  Logger log;
   int epfd, sigfd;
   std::map<RealTime, std::set<TimedEvent *>> table;
   std::set<IdleEvent *> idleness;

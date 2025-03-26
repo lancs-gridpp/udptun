@@ -47,7 +47,8 @@ PayloadQueue::PayloadQueue(const std::string &name,
                            std::size_t max_mem, Quota &quota,
                            const std::filesystem::path &dir,
                            user_t user)
-  : name(name), dir(dir), max_mem(max_mem), quota(quota),
+  : name(name), log("udptun.queue", std::string("queue:") + name),
+    dir(dir), max_mem(max_mem), quota(quota),
     quota_user(std::bind(&PayloadQueue::discard_file, this)),
     sz_mem(0), user(user), disappointed(true)
 {

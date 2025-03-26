@@ -49,6 +49,7 @@
 #include "descriptor.hh"
 #include "timed.hh"
 #include "idle.hh"
+#include "logger.hh"
 
 class Exit;
 
@@ -92,6 +93,7 @@ class TCPEgress : public Egress {
   std::list<Connection> conns;
 
   const std::string name;
+  Logger log;
   Scheduler &sched;
   IdleEvent idev;
   const bool ipv4, ipv6;
