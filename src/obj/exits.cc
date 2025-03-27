@@ -122,9 +122,6 @@ void Exit::try_to_send()
     return;
 
   case EWOULDBLOCK:
-#if EAGAIN != EWOULDBLOCK
-  case EAGAIN:
-#endif
     emitter->notify(emitter_user);
     return;
 
