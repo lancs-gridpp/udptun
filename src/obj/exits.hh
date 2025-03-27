@@ -59,7 +59,9 @@ class Exit {
   const std::string name;
   Logger log;
   IdleEvent ready_event;
+  TimedEvent retry_event;
   PayloadQueue queue;
+  Payload unconfirmed;
 
   std::function<void()> emitter_user;
   std::shared_ptr<Emitter> emitter;

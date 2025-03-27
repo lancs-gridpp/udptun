@@ -97,7 +97,10 @@ public:
   void poke();
 
   /* Consume the head of the queue. */
-  void consume();
+  void consume(Payload &);
+
+  /* Push something back onto the head of the queue. */
+  void unget(Payload &&);
 
   ~PayloadQueue();
 };

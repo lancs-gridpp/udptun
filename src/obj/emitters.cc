@@ -160,11 +160,6 @@ int Emitter::send(const void *buf, size_t len, Destination &dst, int flags)
   assert(sock >= 0);
   auto rc = dst.send(family, protocol, sock, buf, len, flags);
 
-  /* If we got connection refused, it's from an earlier message, so
-     just try sending again. */
-  if (rc < 0 && errno == ECONNREFUSED)
-    rc = dst.send(family, protocol, sock, buf, len, flags);
-
   if (rc < 0) {
     /* If we'd block (not that it's likely), ask the scheduler to tell
        us when we wouldn't, and record that there's no point in trying

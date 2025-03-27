@@ -72,6 +72,7 @@ Exit::Exit(const std::string &name,
            std::shared_ptr<Destination> dest)
   : name(name), log("udptun.egress.exit", std::string("egress:") + name),
     ready_event(sched, std::bind(&Exit::try_to_send, this)),
+    retry_event(sched, std::bind(&Exit::check, this)),
     queue(std::string("egress:") + name,
           100 * 1024, quota, dir, std::bind(&Exit::check, this)),
     emitter_user(std::bind(&Exit::check, this)),
@@ -110,15 +111,22 @@ void Exit::try_to_send()
                           payload->size(), *destination.get(), 0);
   switch (rc) {
   case 0:
-    /* The payload was sent successfully.  Tell the queue not to keep
-       it. */
-    queue.consume();
+    /* The previous payload was sent successfully.  Tell the queue not
+       to keep it, but we'll hang on to it. */
+    queue.consume(unconfirmed);
 
     /* Do we have any more payloads? */
     if (queue.peek())
       /* We're ready to send another.  Tell the emitter to notify us
          when it's ready. */
       emitter->notify(emitter_user);
+    return;
+
+  case ECONNREFUSED:
+    /* Consider this payload and the last to be undelivered.  Try
+       again after some period of time. */
+    queue.unget(std::move(unconfirmed));
+    retry_event.set(std::chrono::seconds(30));
     return;
 
   case EWOULDBLOCK:
@@ -137,6 +145,7 @@ void Exit::try_to_send()
 
 Exit::~Exit()
 {
+  queue.unget(std::move(unconfirmed));
   emitter->forget(emitter_user);
 }
 

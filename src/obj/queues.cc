@@ -182,7 +182,7 @@ Payload *PayloadQueue::peek()
   return &*hd;
 }
 
-void PayloadQueue::consume()
+void PayloadQueue::consume(Payload &into)
 {
   /* Remove the head element if present. */
   auto pos = queue.begin();
@@ -193,8 +193,21 @@ void PayloadQueue::consume()
       pos->describe(out);
       out << " -tmem " << sz_mem;
     });
+    into = std::move(*pos);
     queue.erase(pos);
   }
+}
+
+void PayloadQueue::unget(Payload &&pl)
+{
+  if (!pl) return;
+  sz_mem += pl.size();
+  queue.push_front(std::move(pl));
+  log.detail([this](std::ostream &out) {
+    out << "unget ";
+    queue.front().describe(out);
+    out << " tmem+ " << sz_mem;
+  });
 }
 
 void PayloadQueue::push(const void *base, std::size_t len)

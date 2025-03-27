@@ -92,7 +92,8 @@ bool Channel::consumed(std::size_t done)
   assert(current);
   this->done += done;
   if (this->done == MAX_LABEL_BYTES + MAX_LENGTH_BYTES + current->size()) {
-    queue.consume();
+    Payload dummy;
+    queue.consume(dummy);
     current = nullptr;
     queue.poke();
     return true;
