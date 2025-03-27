@@ -71,18 +71,6 @@
 #include "fnexp.hh"
 #include "logging.hh"
 
-static sig_atomic_t reload = 0, quit = 0;
-
-static void on_reload(int sn)
-{
-  reload = 1;
-}
-
-static void on_quit(int sn)
-{
-  quit = 1;
-}
-
 template <class T>
 static void populate(std::map<std::string, std::shared_ptr<T>> &dst,
                      const std::string &key,
@@ -135,31 +123,13 @@ int main(int argc, const char *const *argv)
       throw std::system_error(errno, std::system_category(), "sigprocmask");
   }
 
-  {
-    /* Set a bunch of signal handlers that are not interrupted by
-       other signals. */
-    extern const struct sigaction empty_sa;
-    struct sigaction sa = empty_sa;
-    if (sigfillset(&sa.sa_mask) < 0)
-      throw std::system_error(errno, std::system_category(), "sigfillset");
-
-    /* Set a handler for SIGHUP. */
-    sa.sa_handler = &on_reload;
-    if (sigaction(SIGHUP, &sa, NULL) < 0)
-      throw std::system_error(errno, std::system_category(), "sigaction(HUP)");
-
-    /* Set a handler for SIGINT. */
-    sa.sa_handler = &on_quit;
-    if (sigaction(SIGINT, &sa, NULL) < 0)
-      throw std::system_error(errno, std::system_category(), "sigaction(INT)");
-
-    /* Set a handler for SIGTERM. */
-    sa.sa_handler = &on_quit;
-    if (sigaction(SIGTERM, &sa, NULL) < 0)
-      throw std::system_error(errno, std::system_category(), "sigaction(TERM)");
-  }
-
   Scheduler sched;
+  bool reload = false, quit = false;
+  SignalEvent on_sighup(sched, [&reload]() { reload = true; });
+  SignalEvent on_sigint(sched, [&quit]() { quit = true; });
+  SignalEvent on_sigterm(sched, [&quit]() { quit = true; });
+  on_sigint.set(SIGINT);
+  on_sigterm.set(SIGTERM);
 
   {
     /* Express which signals are going to be blocked while polling.
@@ -170,6 +140,12 @@ int main(int argc, const char *const *argv)
       throw std::system_error(errno, std::system_category(), "sigemptyset");
     if (sigaddset(&poll_sigs, SIGUSR2) < 0)
       throw std::system_error(errno, std::system_category(), "sigaddset(USR2)");
+    if (sigaddset(&poll_sigs, SIGINT) < 0)
+      throw std::system_error(errno, std::system_category(), "sigaddset(INT)");
+    if (sigaddset(&poll_sigs, SIGTERM) < 0)
+      throw std::system_error(errno, std::system_category(), "sigaddset(TERM)");
+    if (sigaddset(&poll_sigs, SIGHUP) < 0)
+      throw std::system_error(errno, std::system_category(), "sigaddset(HUP)");
     sched.signal_mask(poll_sigs);
   }
 
@@ -185,6 +161,7 @@ int main(int argc, const char *const *argv)
   while (!quit) {
     /* Prepare to detect a new SIGHUP signal. */
     reload = 0;
+    on_sighup.set(SIGHUP);
 
     /* (Re-)load configuration. */
     std::cerr << "reading config" << std::endl;
