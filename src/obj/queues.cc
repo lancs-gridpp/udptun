@@ -204,6 +204,7 @@ void PayloadQueue::push(const void *base, std::size_t len)
     queue.emplace_back(base, len);
     sz_mem += len;
     log.detail([this](std::ostream &out) {
+      out << "push ";
       queue.back().describe(out);
       out << " +tmem " << sz_mem;
     });
