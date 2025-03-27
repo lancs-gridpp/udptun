@@ -49,13 +49,15 @@
 
 Destination::Destination(const std::string &name, const YAML::Node &cfg)
   : name(name),
-    log("udptun.egress.destination", std::string("destination:") + name)
-{
-  const bool ipv4 = cfg["ipv4"].as<bool>("true");
-  const bool ipv6 = cfg["ipv6"].as<bool>("true");
-  const std::string host = cfg["host"].as<std::string>("localhost");
-  const std::string srv = cfg["port"].as<std::string>("");
+    log("udptun.egress.destination", std::string("destination:") + name),
+    ipv4(cfg ? cfg["ipv4"].as<bool>("true") : true),
+    ipv6(cfg ? cfg["ipv6"].as<bool>("true") : true),
+    host(cfg ? cfg["host"].as<std::string>("localhost")
+         : std::string("localhost")),
+    srv(cfg ? cfg["port"].as<std::string>() : std::string()) { }
 
+void Destination::activate()
+{
   /* Restrict what we're looking for. */
   struct addrinfo hints;
   memset(&hints, 0, sizeof hints);

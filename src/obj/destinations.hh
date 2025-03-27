@@ -50,6 +50,8 @@
 class Destination {
   const std::string name;
   Logger log;
+  const bool ipv4, ipv6;
+  const std::string host, srv;
 
   class Key {
     const int family, protocol;
@@ -75,6 +77,7 @@ class Destination {
 
 public:
   Destination(const std::string &name, const YAML::Node &cfg);
+  void activate();
 
   /* Match the address family and protocol of the given socket to a
      resolved socket address, and send the data.  Return ENOSYS if
