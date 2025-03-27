@@ -282,7 +282,8 @@ static int trapped_main(Logger &log, Config &config)
                            [&sched, &find_channel]
                            (const std::string &inst,
                             const YAML::Node &cfg) {
-                             return make_absorber(sched, inst, cfg, find_channel);
+                             return make_absorber(sched, inst,
+                                                  cfg, find_channel);
                            });
       }
 
