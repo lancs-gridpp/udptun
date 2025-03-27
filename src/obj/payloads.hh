@@ -58,6 +58,9 @@ public:
   Payload &operator =(Payload &&);
   void save(std::ofstream &out);
   bool load(std::ifstream &in, std::size_t &sum);
+  static void describe(std::ostream &,
+                       const unsigned char *base, std::size_t len);
+  void describe(std::ostream &out) { describe(out, base_, len_); }
 
   /* Check for contents. */
   operator bool() { return base_; }

@@ -35,8 +35,10 @@
  */
 
 #include <sys/uio.h>
+#include <zlib.h>
 
 #include <cstring>
+#include <cinttypes>
 #include <cassert>
 
 #include <string>
@@ -126,4 +128,23 @@ void Payload::clear()
     base_ = nullptr;
   }
   len_ = 0;
+}
+
+static unsigned long bufck(const unsigned char *base, std::size_t len)
+{
+  uLong ck = ::crc32_z(0L, Z_NULL, 0);
+  return ::crc32_z(ck, base, len);
+}
+
+void Payload::describe(std::ostream &out,
+                       const unsigned char *base, std::size_t len)
+{
+  if (base) {
+    uLong ck = bufck(base, len);
+    char tmp[10];
+    snprintf(tmp, sizeof tmp, "%08" PRIXFAST32, (uint_fast32_t) ck);
+    out << len << "[" << tmp << "]";
+  } else {
+    out << "empty";
+  }
 }

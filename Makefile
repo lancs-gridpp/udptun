@@ -52,6 +52,7 @@ udptun_obj += timed
 udptun_obj += fnexp
 udptun_obj += network
 udptun_lib += -lyaml-cpp
+udptun_lib += -lz
 
 test_binaries.cc += testpayload
 testpayload_obj += payloads

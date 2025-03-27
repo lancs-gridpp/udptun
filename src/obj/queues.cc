@@ -70,9 +70,15 @@ PayloadQueue::PayloadQueue(const std::string &name,
     /* Accumulate the file size. */
     auto fsz = std::filesystem::file_size(fn);
     tsz += fsz;
+    log.trace([&fsz, &fn](std::ostream &out) {
+      out << "count(" << fn << ") size(" << fsz << ")";
+    });
   }
 
   /* Report the total to the quota manager. */
+  log.debug([&tsz, &oldest_key](std::ostream &out) {
+    out << "loaded " << tsz << "; oldest " << oldest_key;
+  });
   quota.increase(quota_user, tsz);
   quota.oldest(quota_user, oldest_key);
 }
@@ -121,6 +127,9 @@ bool PayloadQueue::load_head_file()
     while (load1(fin, sum))
       ;
     fin.close();
+    log.trace([&sum, &ofn](std::ostream &out) {
+      out << "load(" << ofn << ") size(" << sum << ")";
+    });
 
     /* Delete the file and its entry, and notify thw quota manager of
        the reduction in disc usage. */
@@ -145,6 +154,9 @@ void PayloadQueue::discard_file()
   std::filesystem::remove(ofn);
   queue_fns.erase(pos);
   quota.decrease(quota_user, sz);
+  log.trace([&sz, &ofn](std::ostream &out) {
+    out << "discard(" << ofn << ") size(" << sz << ")";
+  });
 }
 
 void PayloadQueue::poke()
@@ -173,8 +185,15 @@ void PayloadQueue::consume()
 {
   /* Remove the head element if present. */
   auto pos = queue.begin();
-  if (pos != queue.end())
+  if (pos != queue.end()) {
+    sz_mem -= pos->size();
+    log.detail([this, &pos](std::ostream &out) {
+      out << "consumed ";
+      pos->describe(out);
+      out << " -tmem " << sz_mem;
+    });
     queue.erase(pos);
+  }
 }
 
 void PayloadQueue::push(const void *base, std::size_t len)
@@ -184,6 +203,10 @@ void PayloadQueue::push(const void *base, std::size_t len)
     bool was_empty = queue.empty();
     queue.emplace_back(base, len);
     sz_mem += len;
+    log.detail([this](std::ostream &out) {
+      queue.back().describe(out);
+      out << " +tmem " << sz_mem;
+    });
 
     /* Let the user know we have a queue entry available. */
     if (was_empty && disappointed) {
@@ -203,6 +226,9 @@ void PayloadQueue::push(const void *base, std::size_t len)
     if (out.is_open()) out.close();
     out.open(nf, std::ios::binary);
     sz_out = 0;
+    log.detail([&nf](std::ostream &out) {
+      out << "new " << nf;
+    });
   }
 
   /* Append the payload to the latest file.  Keep track of the file
@@ -210,6 +236,10 @@ void PayloadQueue::push(const void *base, std::size_t len)
      quota manager about the increase in disc usage. */
   Payload::save(out, base, len);
   sz_out += len + 2;
+  log.detail([this, base, len](std::ostream &out) {
+    Payload::describe(out, (const unsigned char *) base, len);
+    out << " +tfil " << sz_out;
+  });
   if (sz_out >= max_mem)
     out.close();
   quota.increase(quota_user, len + 2);
