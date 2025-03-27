@@ -123,7 +123,7 @@ int main(int argc, const char *const *argv)
     if (sigprocmask(SIG_BLOCK, &okay_sigs, nullptr) < 0)
       throw std::system_error(errno, std::system_category(), "sigprocmask");
 
-    trapped_main(log, config);
+    return trapped_main(log, config);
   } catch (const std::system_error &e) {
     log.critical([&e](std::ostream &out) {
       out << "system error: (" << e.code();
@@ -131,14 +131,17 @@ int main(int argc, const char *const *argv)
         out << "; " << strerrorname_np(e.code().value());
       out << ") " << e.what() << std::endl;
     });
+    return EXIT_FAILURE;
   } catch (const std::runtime_error &e) {
     log.critical([&e](std::ostream &out) {
       out << "runtime error: " << e.what() << std::endl;
     });
+    return EXIT_FAILURE;
   } catch (const std::exception &e) {
     log.critical([&e](std::ostream &out) {
       out << "unknown exception: " << e.what() << std::endl;
     });
+    return EXIT_FAILURE;
   }
 }
 
