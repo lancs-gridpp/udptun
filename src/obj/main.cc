@@ -164,7 +164,7 @@ int main(int argc, const char *const *argv)
     on_sighup.set(SIGHUP);
 
     /* (Re-)load configuration. */
-    std::cerr << "reading config" << std::endl;
+    log.info("reading config");
     YAML::Node root = config.get();
 
     Logging::configure(root["logging"]);
@@ -342,6 +342,6 @@ int main(int argc, const char *const *argv)
     }
   }
 
-  std::cerr << "terminating" << std::endl;
+  log.info("terminating");
   return EXIT_SUCCESS;
 }
