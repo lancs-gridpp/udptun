@@ -50,6 +50,7 @@
 class Scheduler;
 class Payload;
 class Quota;
+class Ingress;
 
 class Channel : Streamer {
   const std::string name;

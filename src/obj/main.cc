@@ -54,7 +54,7 @@
 #include <yaml-cpp/yaml.h>
 
 #include "config.hh"
-#include "streamer.hh"
+#include "ingress.hh"
 #include "egress.hh"
 #include "destinations.hh"
 #include "exits.hh"

@@ -34,24 +34,75 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ingress_included
-#define ingress_included
+#ifndef tcp_ingress_included
+#define tcp_ingress_included
+
+#include <netdb.h>
+
+#include <cstdint>
 
 #include <string>
+#include <vector>
+#include <list>
+#include <set>
 
 #include <yaml-cpp/yaml.h>
 
+#include "logger.hh"
+#include "ingress.hh"
+#include "descriptor.hh"
+#include "timed.hh"
+#include "addrevent.hh"
+
+struct addrinfo;
+
 class Streamer;
 
-struct Ingress {
-  virtual void ready(Streamer &) = 0;
-  virtual ~Ingress();
+class TCPIngress : public Ingress {
+  const std::string name;
+  Logger log;
+  const bool ipv4, ipv6;
+  const std::string host;
+  const std::string srv;
+  int sock;
+  bool connected, upout_ready;
+
+  struct gaicb addrinfo;
+
+  DescriptorEvent fdev;
+  void descriptor_ready(uint32_t);
+
+  TimedEvent rstev;
+  void initiate_lookup();
+
+  const struct addrinfo *ainf;
+  AddressEvent addrev;
+  void address_resolved(const struct addrinfo *);
+  void clear_socket();
+  void try_connect();
+
+  /* Try to get data from one of our sources (the head of
+     'streamer_queue'), and send it.  Keep doing this until there's no
+     more to send, or we get EWOULDBLOCK.  If 'upout_ready' is false
+     on entry, set up a callbacl for when the socket is writable
+     instead.  'upout_ready' gets set to false after any attempt to
+     send a message.  */
+  void try_send();
+
+  /* We keep a queue of sources of data, and a set to prevent
+     duplicates. */
+  std::set<Streamer *> streamers;
+  std::list<Streamer *> streamer_queue;
+
+  /* We offer this to data sources when we're ready to send.  It is
+     cleared before each use, but retains its allocation. */
+  std::vector<struct iovec> iov;
+
+public:
+  TCPIngress(const std::string &name,
+             Scheduler &sched, AddressManager &, const YAML::Node &);
+  ~TCPIngress();
+  void ready(Streamer &);
 };
-
-class Scheduler;
-class AddressManager;
-
-Ingress *make_ingress(Scheduler &, AddressManager &,
-                      const std::string &, const YAML::Node &);
 
 #endif

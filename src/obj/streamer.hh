@@ -37,7 +37,6 @@
 #ifndef streamer_included
 #define streamer_included
 
-#include <string>
 #include <vector>
 
 #include <yaml-cpp/yaml.h>
@@ -60,18 +59,7 @@ public:
 
   /* Be advised that an attempt to send failed, and so the message
      should not be discarded, and resent from scratch. */
-  virtual void failed() { };
+  virtual void failed();
 };
-
-struct Ingress {
-  virtual void ready(Streamer &) = 0;
-  virtual ~Ingress();
-};
-
-class Scheduler;
-class AddressManager;
-
-Ingress *make_ingress(Scheduler &, AddressManager &,
-                      const std::string &, const YAML::Node &);
 
 #endif

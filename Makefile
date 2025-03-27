@@ -43,6 +43,7 @@ udptun_obj += egress
 udptun_obj += quotas
 udptun_obj += main
 udptun_obj += ingress
+udptun_obj += tcp_ingress
 udptun_obj += empties
 udptun_obj += events
 udptun_obj += scheduling

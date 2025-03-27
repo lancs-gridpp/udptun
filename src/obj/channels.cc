@@ -43,6 +43,7 @@
 #include "payloads.hh"
 #include "scheduling.hh"
 #include "formatting.hh"
+#include "ingress.hh"
 
 Channel::Channel(const std::string &name,
                  Scheduler &sched,
