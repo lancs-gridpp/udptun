@@ -54,8 +54,6 @@
 #include <yaml-cpp/yaml.h>
 
 #include "config.hh"
-#include "periods.hh"
-#include "realtime.hh"
 #include "streamer.hh"
 #include "egress.hh"
 #include "destinations.hh"
@@ -360,7 +358,7 @@ static int trapped_main(Logger &log, Config &config)
          short time. */
       if (quit) {
         idle.set();
-        quit_timeout.set(10, TimePeriod::SECOND);
+        quit_timeout.set(std::chrono::seconds(10));
       }
     }
   }

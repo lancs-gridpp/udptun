@@ -90,15 +90,21 @@ int Scheduler::timeout()
 
   /* How long is it in milliseconds until the earliest timed event?
      This will be used as the timeout. */
-  RealTime now;
-  now.now();
-  RealTime first = table.begin()->first;
-  TimePeriod delay = first - now;
-  delay.clamp_nonnegative();
-  /* Clamp actual result in milliseconds to INT_MAX or less. */
-  uintmax_t res = delay.to_milliseconds();
-  if (res > INT_MAX) res = INT_MAX;
-  return res;
+  auto now = std::chrono::system_clock::now();
+  const auto &first = table.begin()->first;
+  auto delay = std::chrono::duration_cast<std::chrono::milliseconds>(first - now).count();
+
+  if (delay < 0)
+    /* The first timed event is already due, so don't wait for it. */
+    return 0;
+  else if (delay > INT_MAX)
+    /* The first event is too far in the future to represent, so wait
+       as log as we're allowed.  Another call to poll() will be
+       necessary. */
+    return INT_MAX;
+  else
+    /* Return the actual delay in milliseconds. */
+    return delay;
 }
 
 void Scheduler::update_signal(int signo)
@@ -183,13 +189,12 @@ void Scheduler::poll()
   }
 
   /* Collect timed events. */
-  RealTime now;
-  now.now();
+  auto now = std::chrono::system_clock::now();
   for (auto iter = table.begin(); iter != table.upper_bound(now); iter++)
     for (auto miter = iter->second.begin();
          miter != iter->second.end(); miter++) {
       auto ptr = *miter;
-      ptr->when.zero();
+      ptr->set_ = false;
       enqueue(ptr);
     }
   table.erase(table.begin(), table.upper_bound(now));

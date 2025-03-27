@@ -47,8 +47,6 @@
 #include <set>
 #include <string>
 
-#include "periods.hh"
-#include "realtime.hh"
 #include "priority.hh"
 
 class Scheduler;

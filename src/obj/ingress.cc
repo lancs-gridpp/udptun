@@ -82,7 +82,7 @@ void TCPIngress::descriptor_ready(uint32_t evs)
     /* The peer closed the connection.  Discard the socket, and try
        again in a while. */
     clear_socket();
-    rstev.set(TimePeriod(30, TimePeriod::SECOND));
+    rstev.set(std::chrono::seconds(30));
     return;
   }
 
@@ -162,7 +162,7 @@ void TCPIngress::try_connect()
 
     if (sock < 0) {
       /* We failed to open a socket.  Try again in a bit. */
-      rstev.set(TimePeriod(30, TimePeriod::SECOND));
+      rstev.set(std::chrono::seconds(30));
       return;
     }
 
@@ -254,7 +254,7 @@ void TCPIngress::try_send()
         /* Close and discard the socket, and ensure we try again in a
            while. */
         clear_socket();
-        rstev.set(TimePeriod(30, TimePeriod::SECOND));
+        rstev.set(std::chrono::seconds(30));
         return;
       }
 

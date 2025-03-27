@@ -42,6 +42,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <chrono>
 
 #include "priority.hh"
 #include "logger.hh"
@@ -51,12 +52,11 @@ class IdleEvent;
 class TimedEvent;
 class DescriptorEvent;
 class SignalEvent;
-class RealTime;
 
 class Scheduler {
   Logger log;
   int epfd, sigfd;
-  std::map<RealTime, std::set<TimedEvent *>> table;
+  std::map<std::chrono::system_clock::time_point, std::set<TimedEvent *>> table;
   std::set<IdleEvent *> idleness;
   std::map<int, std::set<SignalEvent *>> signal_handlers;
 

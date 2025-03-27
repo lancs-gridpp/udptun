@@ -44,9 +44,8 @@
 #include <iostream>
 
 TimedEvent::TimedEvent(Scheduler &sched, timed_handler_t action)
-  : Event(sched), action(action)
+  : Event(sched), action(action), set_(false)
 {
-  when.zero();
   name("timed");
 }
 
@@ -55,41 +54,33 @@ void TimedEvent::notify()
   action();
 }
 
-void TimedEvent::set(const RealTime &when)
+void TimedEvent::set(const std::chrono::system_clock::time_point &when)
 {
-  if (this->when == when) return;
-  sched->cancel(this);
+  if (set_) {
+    if (this->when == when) return;
+    sched->cancel(this);
+  }
   this->when = when;
+  set_ = true;
   sched->set(this);
-}
-
-void TimedEvent::set(const TimePeriod &in)
-{
-  sched->cancel(this);
-  when.now();
-  when += in;
-  sched->set(this);
-  sched->dequeue(this);
 }
 
 void TimedEvent::cancel()
 {
-  sched->cancel(this);
-  when.zero();
   sched->dequeue(this);
+  if (!set_) return;
+  sched->cancel(this);
+  set_ = false;
 }
 
 void Scheduler::set(TimedEvent *mom)
 {
-  if (!mom->when)
-    throw std::invalid_argument(sformat("bad unit time %s",
-                                        std::string(mom->when).c_str()));
-  //std::cerr << "setting entry at " << std::string(mom->when) << std::endl;
+  assert(mom->set_);
   table[mom->when].insert(mom);
 }
 
 void Scheduler::cancel(TimedEvent *mom)
 {
-  if (mom->when)
-    table[mom->when].erase(mom);
+  assert(mom->set_);
+  table[mom->when].erase(mom);
 }

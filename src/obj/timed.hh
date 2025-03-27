@@ -38,9 +38,8 @@
 #define timed_included
 
 #include <functional>
+#include <chrono>
 
-#include "periods.hh"
-#include "realtime.hh"
 #include "events.hh"
 
 typedef std::function<void()> timed_handler_t;
@@ -49,17 +48,20 @@ class Scheduler;
 
 class TimedEvent : public Event {
   timed_handler_t action;
-  RealTime when;
+  std::chrono::system_clock::time_point when;
+  bool set_;
   friend class Scheduler;
 
 public:
   void notify();
   TimedEvent(Scheduler &sched, timed_handler_t action);
-  operator bool() { return bool(when); }
-  void set(const RealTime &);
-  void set(const TimePeriod &);
-  void set(double delay, TimePeriod::unit_t unit)
-  { set(TimePeriod(delay, unit)); }
+  operator bool() { return set_; }
+  void set(const std::chrono::system_clock::time_point &);
+  void set(const std::chrono::system_clock::duration &in) {
+    auto when = std::chrono::system_clock::now();
+    when += in;
+    set(when);
+  }
   void cancel();
 };
 
