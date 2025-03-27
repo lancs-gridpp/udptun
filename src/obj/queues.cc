@@ -102,6 +102,7 @@ bool PayloadQueue::load1(std::ifstream &fin, std::size_t &sum)
 {
   Payload pl;
   if (pl.load(fin, sum)) {
+    sz_mem += pl.size();
     queue.push_back(std::move(pl));
     return true;
   } else {
