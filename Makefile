@@ -31,6 +31,7 @@ udptun_obj += messages
 udptun_obj += streamer
 udptun_obj += channels
 udptun_obj += absorbers
+udptun_obj += udp_absorbers
 udptun_obj += signaling
 udptun_obj += addressing
 udptun_obj += destinations

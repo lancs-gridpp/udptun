@@ -34,29 +34,40 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef absorbers_included
-#define absorbers_included
+#ifndef udp_absorbers_included
+#define udp_absorbers_included
 
 #include <string>
-#include <functional>
 #include <memory>
+#include <set>
 
 #include <yaml-cpp/yaml.h>
 
+#include "absorbers.hh"
+#include "descriptor.hh"
 #include "logger.hh"
 
-struct Absorber {
-  virtual void activate() = 0;
-  virtual ~Absorber();
-};
-
 class Channel;
-class Scheduler;
 
-typedef
-std::function<std::shared_ptr<Channel>(const std::string &)> channel_index_t;
+class UDPAbsorber : public Absorber {
+  const std::string name;
+  Logger log;
+  const bool ipv4, ipv6;
+  const std::string host, srv;
+  const std::set<std::shared_ptr<Channel>> channels;
 
-Absorber *make_absorber(Scheduler &, const std::string &, const YAML::Node &,
-                        channel_index_t);
+  int sock;
+  DescriptorEvent sockev;
+  void sock_ready(uint32_t events);
+  unsigned char buf[65536];
+
+public:
+  UDPAbsorber(const std::string &name,
+              Scheduler &, const YAML::Node &,
+              const std::set<std::shared_ptr<Channel>> &);
+  ~UDPAbsorber();
+
+  void activate();
+};
 
 #endif
