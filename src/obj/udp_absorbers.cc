@@ -47,7 +47,8 @@
 UDPAbsorber::UDPAbsorber(const std::string &name,
                          Scheduler &sched, const YAML::Node &cfg,
                          const std::set<std::shared_ptr<Channel>> &channels)
-  : name(name), log("udptun.ingress.absorber.udp", std::string("absorber:") + name),
+  : name(name),
+    log("udptun.ingress.absorber.udp", std::string("absorber:") + name),
     ipv4(cfg ? cfg["ipv4"].as<bool>("true") : true),
     ipv6(cfg ? cfg["ipv6"].as<bool>("true") : true),
     host(cfg ? cfg["host"].as<std::string>("localhost")
@@ -55,7 +56,8 @@ UDPAbsorber::UDPAbsorber(const std::string &name,
     srv(cfg ? cfg["port"].as<std::string>() : std::string()),
     channels(channels),
     sock(-1),
-    sockev(sched, std::bind(&UDPAbsorber::sock_ready, this, std::placeholders::_1))
+    sockev(sched,
+           std::bind(&UDPAbsorber::sock_ready, this, std::placeholders::_1))
 {
   sockev.name(sformat("absorber:%s:descriptor", name.c_str()));
 }
