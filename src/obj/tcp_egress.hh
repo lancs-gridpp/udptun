@@ -34,29 +34,68 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef egress_included
-#define egress_included
+#ifndef tcp_egress_included
+#define tcp_egress_included
 
-#include <string>
+#include <cstdint>
+
+#include <list>
+#include <set>
 #include <map>
 #include <memory>
 
-#include <yaml-cpp/yaml.h>
-
 #include "logger.hh"
+#include "egress.hh"
+#include "descriptor.hh"
+#include "idle.hh"
 
-class Exit;
-class Scheduler;
+class TCPEgress : public Egress {
+  class Listener {
+    friend TCPEgress;
+    TCPEgress &parent;
+    int sock;
+    void handle_fd(uint32_t);
+    DescriptorEvent fdev;
 
-struct Egress {
-  virtual void activate();
-  virtual void channel(unsigned, std::shared_ptr<Exit> dst) = 0;
-  virtual ~Egress() = default;
+  public:
+    Listener(TCPEgress &, int sock);
+    ~Listener();
+  };
+  friend class Listener;
+  std::list<Listener> listeners;
+
+  class Connection {
+    friend TCPEgress;
+    TCPEgress &parent;
+    int sock;
+    void handle_fd(uint32_t);
+    unsigned char buf[4 + 2 + 65507];
+    std::size_t len;
+    DescriptorEvent fdev;
+
+    bool process();
+
+  public:
+    Connection(TCPEgress &, int sock);
+    ~Connection();
+  };
+  friend class Connection;
+  std::list<Connection> conns;
+
+  const std::string name;
+  Logger log;
+  Scheduler &sched;
+  IdleEvent idev;
+  const bool ipv4, ipv6;
+  const std::string host, srv;
+  std::map<unsigned, std::set<std::shared_ptr<Exit>>> exits;
+
+  void flush();
+
+public:
+  TCPEgress(const std::string &name, Scheduler &sched, const YAML::Node &cfg);
+  void activate();
+  void channel(unsigned, std::shared_ptr<Exit> dst);
 };
-
-Egress *make_egress(Scheduler &,
-                    const std::string &egress_name,
-                    const std::map<std::string, std::shared_ptr<Exit>> &refs,
-                    const YAML::Node &);
 
 #endif

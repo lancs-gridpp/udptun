@@ -40,6 +40,7 @@ udptun_obj += queues
 udptun_obj += config
 udptun_obj += exits
 udptun_obj += egress
+udptun_obj += tcp_egress
 udptun_obj += quotas
 udptun_obj += main
 udptun_obj += ingress
