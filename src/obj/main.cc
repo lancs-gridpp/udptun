@@ -184,7 +184,7 @@ static int trapped_main(Logger &log, Config &config)
 
   while (!quit) {
     /* Prepare to detect a new SIGHUP signal. */
-    reload = 0;
+    reload = false;
     on_sighup.set(SIGHUP);
 
     /* (Re-)load configuration. */
@@ -352,7 +352,7 @@ static int trapped_main(Logger &log, Config &config)
       /* If we've received SIGHUP, exit this loop as soon as we're
          idle. */
       if (reload) {
-        reload = 0;
+        reload = false;
         idle.set();
       }
 
