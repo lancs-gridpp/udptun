@@ -38,6 +38,7 @@
 #include <csignal>
 #include <cerrno>
 #include <cstdlib>
+#include <cstring>
 
 #include <sys/epoll.h>
 
@@ -95,6 +96,8 @@ static void populate(std::map<std::string, std::shared_ptr<T>> &dst,
   populate(dst, std::string(key), root, maker);
 }
 
+static int trapped_main(Logger &, Config &);
+
 int main(int argc, const char *const *argv)
 {
   Logger log("udptun.main", "main");
@@ -105,7 +108,7 @@ int main(int argc, const char *const *argv)
     config_filenames.push_back(argv[i]);
   Config config(config_filenames);
 
-  {
+  try {
     /* Block a bunch of signals.  These should include the ones we
        handle outside the polling, and the ones in too. */
     sigset_t okay_sigs;
@@ -121,8 +124,28 @@ int main(int argc, const char *const *argv)
       throw std::system_error(errno, std::system_category(), "sigaddset(USR2)");
     if (sigprocmask(SIG_BLOCK, &okay_sigs, nullptr) < 0)
       throw std::system_error(errno, std::system_category(), "sigprocmask");
-  }
 
+    trapped_main(log, config);
+  } catch (const std::system_error &e) {
+    log.critical([&e](std::ostream &out) {
+      out << "system error: (" << e.code();
+      if (e.code().category() == std::system_category())
+        out << "; " << strerrorname_np(e.code().value());
+      out << ") " << e.what() << std::endl;
+    });
+  } catch (const std::runtime_error &e) {
+    log.critical([&e](std::ostream &out) {
+      out << "runtime error: " << e.what() << std::endl;
+    });
+  } catch (const std::exception &e) {
+    log.critical([&e](std::ostream &out) {
+      out << "unknown exception: " << e.what() << std::endl;
+    });
+  }
+}
+
+static int trapped_main(Logger &log, Config &config)
+{
   Scheduler sched;
   bool reload = false, quit = false;
   SignalEvent on_sighup(sched, [&reload]() { reload = true; });
