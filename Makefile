@@ -80,7 +80,7 @@ BUILD: prepare-version
 VERSION: prepare-version
 	@$(call MYCMPCP,tmp/VERSION,$@)
 
-YEARS=2002-3,2005-6,2012,2016
+YEARS=2025
 
 update-licence:
 	$(FIND) . -name ".git" -prune -or -type f -print0 | $(XARGS) -0 \
