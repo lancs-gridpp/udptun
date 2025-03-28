@@ -65,6 +65,8 @@ include binodeps.mk
 
 all:: installed-binaries VERSION BUILD
 
+install:: install-binaries
+
 
 MYCMPCP=$(CMP) -s '$1' '$2' || $(CP) '$1' '$2'
 .PHONY: prepare-version
