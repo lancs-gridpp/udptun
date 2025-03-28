@@ -6,14 +6,63 @@ On egress, it can listen on multiple TCP addresses, received the annotated packe
 
 # Installation
 
-Install dependencies using one of the following commands:
+Install dependencies using one of the following sets of commands:
 
 ```
-sudo apt-get install yaml-cpp-dev
+sudo apt-get install build-essential findutils diffutils yaml-cpp-dev zlib1g-dev par
 ```
 
 ```
+sudo dnf install epel-release git make gcc-c++ findutils diffutils zlib-devel
 sudo dnf install yaml-cpp-devel
+```
+
+You need Binodeps to build using the supplied `Makefile`:
+```
+cd /tmp
+git clone https://github.com/simpsonst/binodeps.git
+cd binodeps
+make && sudo make install
+```
+
+Create a file `config.mk` adjacent to `Makefile` to customize.
+For example:
+
+```
+CPPFLAGS += -pedantic -Wall -W -Wno-unused-parameter
+CPPFLAGS += -g
+
+CFLAGS += -O3
+CFLAGS += -std=gnu11
+
+CXXFLAGS += -O2
+CXXFLAGS += -std=gnu++17
+
+CPPFLAGS += -D_XOPEN_SOURCE=600
+CPPFLAGS += -D_GNU_SOURCE=1
+CPPFLAGS += -Wno-missing-field-initializers
+```
+
+You should include the following, if they work:
+
+```
+CPPFLAGS += -DWITH_STRERROR_NP
+CPPFLAGS += -DWITH_SIGNAMES
+```
+
+Disable the first if you have trouble compiling calls to `strerrorname_np`.
+Disable the second for problems with `strsignal` or `sigabbrev_np`.
+
+If you don't have the `par` command (a filter for reformatting paragraphs), you can work around it with:
+
+```
+PAR=cat -- ; true
+```
+
+On some systems, you might need to explicitly link some libraries:
+
+```
+udptun_lib += -lstdc++fs -lanl
 ```
 
 # Configuration
