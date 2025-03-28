@@ -139,8 +139,11 @@ void Emitter::activate()
     msg << " [" << af_to_str(sai->ai_family) << ", "
         << proto_to_str(sai->ai_protocol) << ", "
         << to_str(sai->ai_addr, sai->ai_addrlen) << ", "
-        << prb.first << ":" << strerrorname_np(prb.second)
-        << " (" << ::strerror(prb.second) << ")]";
+        << prb.first;
+#ifdef WITH_STRERROR_NP
+    msg << ":" << strerrorname_np(prb.second);
+#endif
+    msg << " (" << ::strerror(prb.second) << ")]";
   }
   throw std::runtime_error(msg.str());
 }

@@ -127,8 +127,10 @@ int main(int argc, const char *const *argv)
   } catch (const std::system_error &e) {
     log.critical([&e](std::ostream &out) {
       out << "system error: (" << e.code();
+#ifdef WITH_STRERROR_NP
       if (e.code().category() == std::system_category())
         out << "; " << strerrorname_np(e.code().value());
+#endif
       out << ") " << e.what() << std::endl;
     });
     return EXIT_FAILURE;
