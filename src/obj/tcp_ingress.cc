@@ -34,6 +34,7 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
 

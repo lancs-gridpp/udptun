@@ -34,6 +34,7 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <unistd.h>
 #include <sys/epoll.h>
 #include <sys/signalfd.h>
 #include <strings.h>
