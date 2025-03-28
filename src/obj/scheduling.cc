@@ -124,14 +124,41 @@ void Scheduler::update_signal(int signo)
   auto tmp = watching;
   if ((state ? sigaddset(&tmp, signo) : sigdelset(&tmp, signo)) < 0)
     throw std::system_error(errno, std::system_category(),
-			    sformat("sig%sset(%s)",
+			    sformat("sig%sset("
+#if defined WITH_SIGNAMES || _POSIX_C_SOURCE >= 200809L
+                                    "%s"
+#else
+                                    "%d"
+#endif
+                                    ")",
                                     state ? "add" : "del",
-                                    sigabbrev_np(signo)));
+#ifdef WITH_SIGNAMES
+                                    sigabbrev_np(signo)
+#elif _POSIX_C_SOURCE >= 200809L
+                                    strsignal(signo)
+#else
+                                    signo
+#endif
+                                    ));
   int rc = signalfd(sigfd, &tmp, 0);
   if (rc < 0)
     throw std::system_error(errno, std::system_category(),
-                            sformat("signalfd(%s%s)", state ? "+" : "-",
-                                    strsignal(signo)));
+                            sformat("signalfd(%s"
+#if defined WITH_SIGNAMES || _POSIX_C_SOURCE >= 200809L
+                                    "%s"
+#else
+                                    "%d"
+#endif
+                                    ")",
+                                    state ? "+" : "-",
+#ifdef WITH_SIGNAMES
+                                    sigabbrev_np(signo)
+#elif _POSIX_C_SOURCE >= 200809L
+                                    strsignal(signo)
+#else
+                                    signo
+#endif
+                                    ));
   watching = tmp;
 }
 
