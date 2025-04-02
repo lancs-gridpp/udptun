@@ -58,6 +58,8 @@ Destination::Destination(const std::string &name, const YAML::Node &cfg)
 
 void Destination::activate()
 {
+  log.debug("activating");
+
   /* Restrict what we're looking for. */
   struct addrinfo hints;
   memset(&hints, 0, sizeof hints);

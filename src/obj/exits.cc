@@ -83,6 +83,7 @@ Exit::Exit(const std::string &name,
 
 void Exit::activate()
 {
+  log.debug("activating");
   destination->activate();
   emitter->activate();
   queue.poke();

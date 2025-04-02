@@ -87,6 +87,8 @@ Emitter::Emitter(Scheduler &sched, const YAML::Node &cfg)
 
 void Emitter::activate()
 {
+  log.debug("activating");
+
   if (sock >= 0) return;
   /* Restrict what we're looking for. */
   struct addrinfo hints;

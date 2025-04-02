@@ -339,15 +339,18 @@ static int trapped_main(Logger &log, Config &config)
     /* Activate all egresses and their dependencies.  This creates the
        necessary sockets, and enables quota enforcement on the
        queues. */
+    log.info("activating egresses");
     for (auto &egress : egress_index)
       egress.second->activate();
 
     /* Activate all absorbers and their dependencies.  This creates
        the necessary sockets, and enables quota enforcement on the
        queues. */
+    log.info("activating ingresses");
     for (auto &absorber : absorber_index)
       absorber.second->activate();
 
+    log.info("polling");
     more = true;
     while (more) {
       sched.poll();
@@ -355,6 +358,7 @@ static int trapped_main(Logger &log, Config &config)
       /* If we've received SIGHUP, exit this loop as soon as we're
          idle. */
       if (reload) {
+        log.info("reload detected");
         reload = false;
         idle.set();
       }
@@ -363,6 +367,7 @@ static int trapped_main(Logger &log, Config &config)
          as we're idle.  Set a timer so we will quit anyway after a
          short time. */
       if (quit) {
+        log.info("quit detected");
         idle.set();
         quit_timeout.set(std::chrono::seconds(10));
       }
