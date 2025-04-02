@@ -48,6 +48,7 @@
 #include "exits.hh"
 #include "network.hh"
 #include "messages.hh"
+#include "addrent.hh"
 
 void TCPEgress::Listener::handle_fd(uint32_t)
 {
@@ -244,52 +245,36 @@ void TCPEgress::activate()
   if (rc < 0)
     throw std::system_error(errno, std::system_category(),
                             sformat("getaddrinfo(%s)", host.c_str()));
+  std::set<AddressEntry> addrs;
   for (auto iter = info; iter; iter = iter->ai_next) {
-    log.detail([this, &iter](std::ostream &out) {
-      out << "gai result: " << af_to_str(iter->ai_family)
-          << " proto " << proto_to_str(iter->ai_protocol)
-          << " for " << to_str(iter->ai_addr, iter->ai_addrlen);
-      if (iter->ai_canonname) out << " canon=" << iter->ai_canonname;
-      if (iter->ai_flags & AI_V4MAPPED) out << " V4MAPPED";
-      if (iter->ai_flags & AI_PASSIVE) out << " PASSIVE";
-      if (iter->ai_flags & AI_NUMERICHOST) out << " NUMERICHOST";
-      if (iter->ai_flags & AI_NUMERICSERV) out << " NUMERICSERV";
-      if (iter->ai_flags & AI_ADDRCONFIG) out << " ADDRCONFIG";
-      if (iter->ai_flags & AI_CANONNAME) out << " ADDRCONFIG";
-      if (iter->ai_flags & AI_ALL) out << " ALL";
+    auto f = addrs.emplace(*iter);
+    log.detail([&f](std::ostream &out) {
+      if (f.second) out << "new ";
+      out << "gai result: " << std::string(*f.first);
     });
   }
 
-  for (auto iter = info; iter; iter = iter->ai_next) {
+  for (auto iter = addrs.begin(); iter != addrs.end(); iter++) {
     log.debug([this, &iter](std::ostream &out) {
-      out << "creating " << af_to_str(iter->ai_family)
-          << " socket proto " << proto_to_str(iter->ai_protocol)
-          << " for " << to_str(iter->ai_addr, iter->ai_addrlen);
-      if (iter->ai_flags & AI_V4MAPPED) out << " V4MAPPED";
-      if (iter->ai_flags & AI_PASSIVE) out << " PASSIVE";
-      if (iter->ai_flags & AI_NUMERICHOST) out << " NUMERICHOST";
-      if (iter->ai_flags & AI_NUMERICSERV) out << " NUMERICSERV";
-      if (iter->ai_flags & AI_ADDRCONFIG) out << " ADDRCONFIG";
-      if (iter->ai_flags & AI_CANONNAME) out << " ADDRCONFIG";
-      if (iter->ai_flags & AI_ALL) out << " ALL";
+      out << "creating " << std::string(*iter);
     });
-    int sock = socket(iter->ai_family, SOCK_STREAM, iter->ai_protocol);
+    int sock = socket(iter->family, SOCK_STREAM, iter->protocol);
     if (sock < 0)
       throw std::system_error(errno, std::system_category(),
                               sformat("socket(%s, SOCK_STREAM, %s) for %s",
-                                      af_to_str(iter->ai_family),
-                                      proto_to_str(iter->ai_protocol),
-                                      to_str(iter->ai_addr,
-                                             iter->ai_addrlen).c_str()));
+                                      af_to_str(iter->family),
+                                      proto_to_str(iter->protocol),
+                                      to_str(iter->addr(),
+                                             iter->addrlen).c_str()));
 
     log.detail("binding");
-    if (bind(sock, iter->ai_addr, iter->ai_addrlen) != 0) {
+    if (bind(sock, iter->addr(), iter->addrlen) != 0) {
       int ec = errno;
       close(sock);
       throw std::system_error(ec, std::system_category(),
                               sformat("bind(%s)",
-                                      to_str(iter->ai_addr,
-                                             iter->ai_addrlen).c_str()));
+                                      to_str(iter->addr(),
+                                             iter->addrlen).c_str()));
     }
 
     log.detail("listening");
@@ -298,10 +283,10 @@ void TCPEgress::activate()
       close(sock);
       throw std::system_error(ec, std::system_category(),
                               sformat("listen %s %s %s",
-                                      af_to_str(iter->ai_family),
-                                      proto_to_str(iter->ai_protocol),
-                                      to_str(iter->ai_addr,
-                                             iter->ai_addrlen).c_str()));
+                                      af_to_str(iter->family),
+                                      proto_to_str(iter->protocol),
+                                      to_str(iter->addr(),
+                                             iter->addrlen).c_str()));
     }
 
     assert(sock >= 0);
