@@ -250,6 +250,13 @@ void TCPEgress::activate()
       out << "creating " << af_to_str(iter->ai_family)
           << " socket proto " << proto_to_str(iter->ai_protocol)
           << " for " << to_str(iter->ai_addr, iter->ai_addrlen);
+      if (iter->ai_flags & AI_V4MAPPED) out << " V4MAPPED";
+      if (iter->ai_flags & AI_PASSIVE) out << " PASSIVE";
+      if (iter->ai_flags & AI_NUMERICHOST) out << " NUMERICHOST";
+      if (iter->ai_flags & AI_NUMERICSERV) out << " NUMERICSERV";
+      if (iter->ai_flags & AI_ADDRCONFIG) out << " ADDRCONFIG";
+      if (iter->ai_flags & AI_CANONNAME) out << " ADDRCONFIG";
+      if (iter->ai_flags & AI_ALL) out << " ALL";
     });
     int sock = socket(iter->ai_family, SOCK_STREAM, iter->ai_protocol);
     if (sock < 0)
