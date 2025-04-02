@@ -244,6 +244,21 @@ void TCPEgress::activate()
   if (rc < 0)
     throw std::system_error(errno, std::system_category(),
                             sformat("getaddrinfo(%s)", host.c_str()));
+  for (auto iter = info; iter; iter = iter->ai_next) {
+    log.detail([this, &iter](std::ostream &out) {
+      out << "gai result: " << af_to_str(iter->ai_family)
+          << " proto " << proto_to_str(iter->ai_protocol)
+          << " for " << to_str(iter->ai_addr, iter->ai_addrlen);
+      if (iter->ai_canonname) out << " canon=" << iter->ai_canonname;
+      if (iter->ai_flags & AI_V4MAPPED) out << " V4MAPPED";
+      if (iter->ai_flags & AI_PASSIVE) out << " PASSIVE";
+      if (iter->ai_flags & AI_NUMERICHOST) out << " NUMERICHOST";
+      if (iter->ai_flags & AI_NUMERICSERV) out << " NUMERICSERV";
+      if (iter->ai_flags & AI_ADDRCONFIG) out << " ADDRCONFIG";
+      if (iter->ai_flags & AI_CANONNAME) out << " ADDRCONFIG";
+      if (iter->ai_flags & AI_ALL) out << " ALL";
+    });
+  }
 
   for (auto iter = info; iter; iter = iter->ai_next) {
     log.debug([this, &iter](std::ostream &out) {
