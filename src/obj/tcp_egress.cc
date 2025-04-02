@@ -205,7 +205,7 @@ void TCPEgress::Connection::handle_fd(uint32_t)
 TCPEgress::TCPEgress(const std::string &name,
                      Scheduler &sched, const YAML::Node &cfg)
   : name(name),
-    log("udptun.egress.tunnel.tcp", std::string("ingress:") + name),
+    log("udptun.egress.tunnel.tcp", std::string("egress:") + name),
     sched(sched),
     idev(sched, std::bind(&TCPEgress::flush, this)),
     ipv4(cfg["ipv4"].as<bool>("true")),
