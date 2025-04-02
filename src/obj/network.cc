@@ -83,7 +83,7 @@ std::string to_str(const struct sockaddr *addr, socklen_t addrlen)
 {
   char host[100], serv[100];
   int rc = getnameinfo(addr, addrlen, host, sizeof host,
-                       serv, sizeof serv, NI_NUMERICHOST);
+                       serv, sizeof serv, NI_NUMERICHOST | NI_NUMERICSERV);
   switch (rc) {
   case 0:
     return std::string(host) + ":" + serv;
