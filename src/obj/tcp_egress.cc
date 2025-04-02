@@ -247,7 +247,9 @@ void TCPEgress::activate()
 
   for (auto iter = info; iter; iter = iter->ai_next) {
     log.debug([this, &iter](std::ostream &out) {
-      out << "creating socket for " << to_str(iter->ai_addr, iter->ai_addrlen);
+      out << "creating " << af_to_str(iter->ai_family)
+          << " socket proto " << proto_to_str(iter->ai_protocol)
+          << " for " << to_str(iter->ai_addr, iter->ai_addrlen);
     });
     int sock = socket(iter->ai_family, SOCK_STREAM, iter->ai_protocol);
     if (sock < 0)
@@ -258,9 +260,7 @@ void TCPEgress::activate()
                                       to_str(iter->ai_addr,
                                              iter->ai_addrlen).c_str()));
 
-    log.detail([this, &iter](std::ostream &out) {
-      out << "binding to " << to_str(iter->ai_addr, iter->ai_addrlen);
-    });
+    log.detail("binding");
     if (bind(sock, iter->ai_addr, iter->ai_addrlen) != 0) {
       int ec = errno;
       close(sock);
@@ -270,9 +270,7 @@ void TCPEgress::activate()
                                              iter->ai_addrlen).c_str()));
     }
 
-    log.detail([this, &iter](std::ostream &out) {
-      out << "listening on " << to_str(iter->ai_addr, iter->ai_addrlen);
-    });
+    log.detail("listening");
     if (listen(sock, 5) != 0) {
       int ec = errno;
       close(sock);
