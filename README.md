@@ -148,3 +148,10 @@ Queues are stored in `/var/spool/udptun/` by default, overridden with the likes 
 queues:
   path: ~/.local/var/spool/udptun
 ```
+
+You can also set a quota, so that older messages are discarded:
+
+```
+queues:
+  quota: 100k
+```
