@@ -131,7 +131,7 @@ Multiple sockets may be specified, each copied its received datagrams to multipl
 ## Addresses
 
 Usually, `host` can be specified wherever `port` can be, and defaults to `localhost`.
-Use an empty string `""` for binding passive sockets (emitters) to `INADDR_ANY`.
+Use an empty string `""` for binding passive sockets (tunnel egresses and all UDP sockets) to `INADDR_ANY`.
 
 Booleans `ipv4` and `ipv6` can also be specified, and default to `true`.
 These four parameters are resolved with `getaddrinfo` into internal socket parameters.
