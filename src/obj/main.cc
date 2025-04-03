@@ -50,6 +50,7 @@
 #include <iostream>
 #include <system_error>
 #include <stdexcept>
+#include <regex>
 
 #include <yaml-cpp/yaml.h>
 
@@ -206,10 +207,36 @@ static int trapped_main(Logger &log, Config &config)
                                            raw.c_str()));
         queuedir = opts[0];
       }
-    }
 
-    /* Set the quota from configuration. */
-    // TODO
+      /* Set the quota from configuration. */
+      if (queues_root["quota"]) {
+        auto txt = queues_root["quota"].as<std::string>();
+        static const char *sfxs = "kmg";
+        static std::regex
+          expr(std::string("^([0-9]+(\\.[0-9]+)?)([") + sfxs + "])?$",
+               std::regex_constants::extended | std::regex_constants::icase);
+        std::smatch mt;
+        if (std::regex_match(txt, mt, expr)) {
+          assert(mt.size() == 4);
+          double amount = std::stod(mt[1]);
+          if (mt[3].matched) {
+            const char *ptr = ::strchr(sfxs, mt[3].str()[0]);
+            assert(ptr);
+            auto diff = ptr - sfxs;
+            for (unsigned i = 0; i <= diff; i++)
+              amount *= 1024.0;
+          }
+          quota.set(amount);
+          log.info([amount](std::ostream &out) {
+            out << "quota " << amount << "B";
+          });
+        } else {
+          log.warn([&txt](std::ostream &out) {
+            out << "bad quota: " << txt;
+          });
+        }
+      }
+    }
 
     log.info("starting");
 
