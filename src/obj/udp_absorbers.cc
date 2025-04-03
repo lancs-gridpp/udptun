@@ -78,7 +78,7 @@ void UDPAbsorber::activate()
   memset(&hints, 0, sizeof hints);
   hints.ai_family = ipv4 ? ipv6 ? AF_UNSPEC : AF_INET : AF_INET6;
   hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_protocol = 0;
+  hints.ai_protocol = AI_PASSIVE;
 
   /* Resolve the host. */
   struct addrinfo *info = nullptr;
