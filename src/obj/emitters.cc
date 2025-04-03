@@ -72,8 +72,10 @@ void Emitter::handle_fd(uint32_t events)
   prime_all();
 }
 
-Emitter::Emitter(Scheduler &sched, const YAML::Node &cfg)
-  : log("udptun.egress.emitter", "emitter"),
+Emitter::Emitter(const std::string &name,
+                 Scheduler &sched, const YAML::Node &cfg)
+  : name(name),
+    log("udptun.egress.emitter", std::string("emitter:") + name),
     ipv4(cfg ? cfg["ipv4"].as<bool>("true") : true),
     ipv6(cfg ? cfg["ipv6"].as<bool>("true") : true),
     host(cfg ? cfg["host"].as<std::string>("localhost")
@@ -82,14 +84,14 @@ Emitter::Emitter(Scheduler &sched, const YAML::Node &cfg)
     sock(-1), ready(false),
     fdev(sched, std::bind(&Emitter::handle_fd, this, std::placeholders::_1))
 {
-  fdev.name("emitter:?:descriptor");
+  fdev.name(std::string("emitter:") + name + ":descriptor");
 }
 
 void Emitter::activate()
 {
+  if (sock >= 0) return;
   log.debug("activating");
 
-  if (sock >= 0) return;
   /* Restrict what we're looking for. */
   struct addrinfo hints;
   memset(&hints, 0, sizeof hints);

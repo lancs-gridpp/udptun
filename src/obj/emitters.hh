@@ -51,6 +51,7 @@ struct Emitter {
   typedef std::function<void()> user_t;
 
 private:
+  const std::string name;
   Logger log;
   const bool ipv4, ipv6;
   const std::string host, srv;
@@ -64,7 +65,7 @@ private:
   void prime_all();
 
 public:
-  Emitter(Scheduler &sched, const YAML::Node &);
+  Emitter(const std::string &name, Scheduler &sched, const YAML::Node &);
   void activate();
   operator bool() { return ready; }
   int send(const void *buf, size_t len, Destination &, int flags);

@@ -76,7 +76,8 @@ egress:
     detailed-dest:
       port: 6789
   sockets:
-    - udp:
+    detailed-socket:
+      udp:
         port: 8000
       queues:
         detailed: detailed-dest
@@ -88,8 +89,8 @@ egress:
         0: [ detailed ]
 ```
 
-(The strings `detailed` and `detailed-dest` are user-defined.
-Tunnel names are used only for logging.)
+(The strings `detailed`, `detailed-socket` and `detailed-dest` are user-defined.
+Tunnel/socket names are used only for logging.)
 
 The example creates a TCP server socket on `localhost:9992`, and accepts connections on it.
 Encapsulated datagrams are received on these connections, and decapsulated.

@@ -318,9 +318,10 @@ static int trapped_main(Logger &log, Config &config)
         std::map<std::string, std::shared_ptr<Exit>> exit_index;
         if (egress_root["sockets"]) {
           const auto &socket_root = egress_root["sockets"];
-          for (auto iter = egress_root["sockets"].begin();
-               iter != egress_root["sockets"].end(); iter++) {
-            make_exits(sched, quota, egress_qdir, *iter, find_dest, exit_index);
+          for (auto iter = socket_root.begin();
+               iter != socket_root.end(); iter++) {
+            make_exits(iter->first.as<std::string>(), sched, quota,
+                       egress_qdir, iter->second, find_dest, exit_index);
           }
         }
 

@@ -85,7 +85,7 @@ public:
 typedef std::function<std::shared_ptr<Destination>(const std::string &)>
 destination_index_t;
 
-void make_exits(Scheduler &sched, Quota &,
+void make_exits(const std::string &name, Scheduler &sched, Quota &,
                 const std::filesystem::path &dir, const YAML::Node &,
                 destination_index_t dests,
                 std::map<std::string, std::shared_ptr<Exit>> &);

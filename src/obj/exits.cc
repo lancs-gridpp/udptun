@@ -45,12 +45,12 @@
 #include "emitters.hh"
 #include "formatting.hh"
 
-void make_exits(Scheduler &sched, Quota &quota,
+void make_exits(const std::string &exname, Scheduler &sched, Quota &quota,
                 const std::filesystem::path &dir, const YAML::Node &cfg,
                 destination_index_t dests,
                 std::map<std::string, std::shared_ptr<Exit>> &out)
 {
-  auto emitter = std::make_shared<Emitter>(sched, cfg["udp"]);
+  auto emitter = std::make_shared<Emitter>(exname, sched, cfg["udp"]);
   const auto end = cfg["queues"].end();
   for (auto iter = cfg["queues"].begin(); iter != end; iter++) {
     auto name = iter->first.as<std::string>();
