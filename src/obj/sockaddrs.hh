@@ -47,6 +47,8 @@ public:
   SocketAddress(const struct sockaddr *, socklen_t);
   SocketAddress(SocketAddress &&);
   SocketAddress &operator =(SocketAddress &&);
+  SocketAddress(const SocketAddress &);
+  SocketAddress &operator =(const SocketAddress &);
   ~SocketAddress();
 
   const struct sockaddr *addr() const {

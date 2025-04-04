@@ -59,6 +59,25 @@ SocketAddress &SocketAddress::operator =(SocketAddress &&rhs)
   return *this;
 }
 
+SocketAddress::SocketAddress(const SocketAddress &rhs)
+  : len_(rhs.len_), base_(rhs.base_ ? new unsigned char[len_] : nullptr)
+{
+  if (base_) ::memcpy(base_, rhs.base_, len_);
+}
+
+SocketAddress &SocketAddress::operator =(const SocketAddress &rhs)
+{
+  if (base_) delete[] base_;
+  len_ = rhs.len_;
+  if (len_) {
+    base_ = new unsigned char[len_];
+    ::memcpy(base_, rhs.base_, len_);
+  } else {
+    base_ = nullptr;
+  }
+  return *this;
+}
+
 SocketAddress::~SocketAddress()
 {
   if (base_) delete[] base_;
