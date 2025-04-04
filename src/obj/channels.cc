@@ -44,6 +44,7 @@
 #include "scheduling.hh"
 #include "formatting.hh"
 #include "ingress.hh"
+#include "marshaling.hh"
 
 Channel::Channel(const std::string &name,
                  Scheduler &sched,

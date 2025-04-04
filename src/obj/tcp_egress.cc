@@ -47,7 +47,7 @@
 #include "destruction.hh"
 #include "exits.hh"
 #include "network.hh"
-#include "messages.hh"
+#include "marshaling.hh"
 #include "addrent.hh"
 
 void TCPEgress::Listener::handle_fd(uint32_t)

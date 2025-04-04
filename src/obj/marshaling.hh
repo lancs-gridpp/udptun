@@ -34,18 +34,26 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef messages_included
-#define messages_included
+#ifndef marshaling_included
+#define marshaling_included
 
-#include <cstdint>
+#include "messages.hh"
 
-#include <limits>
-#include <vector>
+struct iovec;
 
-typedef uint_fast64_t labelset_t;
-constexpr unsigned MAX_LABEL_BYTES = 8;
-constexpr unsigned MAX_LABELS = MAX_LABEL_BYTES * 8;
+void push_onto(std::vector<struct iovec> &vec, unsigned char *base,
+               std::size_t len);
+void push_onto(std::vector<struct iovec> &vec, const unsigned char *base,
+               std::size_t len);
 
-constexpr unsigned MAX_LENGTH_BYTES = 2;
+bool labels_to_bytes(labelset_t, unsigned char *,
+                     std::size_t done, std::size_t pos,
+                     std::vector<struct iovec> &);
+bool length_to_bytes(unsigned len, unsigned char *,
+                     std::size_t done, std::size_t pos,
+                     std::vector<struct iovec> &);
+
+const unsigned char *decode_message(labelset_t &, std::size_t &pktlen,
+                                    const unsigned char *, std::size_t got);
 
 #endif
