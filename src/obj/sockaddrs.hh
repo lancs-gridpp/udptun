@@ -39,11 +39,14 @@
 
 #include <sys/socket.h>
 
+#include <iostream>
+
 class SocketAddress {
   socklen_t len_;
   unsigned char *base_;
 
 public:
+  SocketAddress() : len_(0), base_(nullptr) { }
   SocketAddress(const struct sockaddr *, socklen_t);
   SocketAddress(SocketAddress &&);
   SocketAddress &operator =(SocketAddress &&);
@@ -57,6 +60,8 @@ public:
 
   socklen_t len() const { return len_; }
   friend bool operator <(const SocketAddress &lhs, const SocketAddress &rhs);
+  friend std::ostream &operator <<(std::ostream &lhs, const SocketAddress &rhs);
+  friend std::istream &operator >>(std::istream &lhs, SocketAddress &rhs);
 };
 
 #endif

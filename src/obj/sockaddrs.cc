@@ -91,3 +91,27 @@ bool operator <(const SocketAddress &lhs, const SocketAddress &rhs)
   if (!lhs.base_) return true;
   return ::memcmp(lhs.base_, rhs.base_, lhs.len_) < 0;
 }
+
+std::ostream &operator <<(std::ostream &lhs, const SocketAddress &rhs)
+{
+  lhs << rhs.len_;
+  for (socklen_t i = 0; i < rhs.len_; i++)
+    lhs << " " << rhs.base_[i];
+  return lhs;
+}
+
+std::istream &operator >>(std::istream &lhs, SocketAddress &rhs)
+{
+  if (rhs.base_) {
+    delete[] rhs.base_;
+    rhs.base_ = nullptr;
+    rhs.len_ = 0;
+  }
+  lhs >> rhs.len_;
+  if (rhs.len_ > 0) {
+    rhs.base_ = new unsigned char[rhs.len_];
+    for (socklen_t i = 0; i < rhs.len_; i++)
+      lhs >> rhs.base_[i];
+  }
+  return lhs;
+}
