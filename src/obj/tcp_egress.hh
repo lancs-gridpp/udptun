@@ -48,6 +48,7 @@
 #include "egress.hh"
 #include "descriptor.hh"
 #include "idle.hh"
+#include "messages.hh"
 
 class TCPEgress : public Egress {
   class Listener {
@@ -69,7 +70,7 @@ class TCPEgress : public Egress {
     TCPEgress &parent;
     int sock;
     void handle_fd(uint32_t);
-    unsigned char buf[4 + 2 + 65507];
+    unsigned char buf[MAX_LABEL_BYTES + MAX_LENGTH_BYTES + MAX_LENGTH];
     std::size_t len;
     DescriptorEvent fdev;
 
