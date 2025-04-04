@@ -50,4 +50,7 @@ typedef uint_fast16_t payloadlen_t;
 constexpr unsigned MAX_LENGTH_BYTES = 2;
 constexpr unsigned MAX_LENGTH = 65536;
 
+typedef uint_fast16_t clientid_t;
+constexpr unsigned MAX_CLIENTID_BYTES = 2;
+
 #endif
