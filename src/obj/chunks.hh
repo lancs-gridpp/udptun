@@ -34,49 +34,13 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef payloads_included
-#define payloads_included
+#ifndef chunks_included
+#define chunks_included
 
-#include <fstream>
-
-struct iovec;
-
-class PayloadQueue;
-class Chunk;
-
-class Payload {
-  std::size_t len_;
-  unsigned char *base_;
-
-  static void save(std::ofstream &out,
-                   const void *base, std::size_t len);
-  friend class PayloadQueue;
-
-public:
-  Payload() : len_(0), base_(nullptr) { }
-  Payload(const void *base, std::size_t len);
-  Payload(const Chunk *base, std::size_t len);
-  Payload(Payload &&);
-  Payload &operator =(Payload &&);
-  void save(std::ofstream &out);
-  bool load(std::ifstream &in, std::size_t &sum);
-  static void describe(std::ostream &,
-                       const unsigned char *base, std::size_t len);
-  void describe(std::ostream &out) { describe(out, base_, len_); }
-
-  /* Check for contents. */
-  operator bool() { return base_; }
-
-  const unsigned char *base() { return base_; }
-  std::size_t size() { return len_; }
-
-  /* Get the payload as a vector-write structure, and return true;
-     otherwise, return false. */
-  bool get(struct iovec &);
-
-  /* Discard the contents. */
-  void clear();
-  ~Payload();
+struct Chunk {
+  const void *base;
+  std::size_t len;
+  Chunk(const void *base, std::size_t len) : base(base), len(len) { }
 };
 
 #endif

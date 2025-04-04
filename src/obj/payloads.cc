@@ -50,6 +50,7 @@
 
 #include "payloads.hh"
 #include "destruction.hh"
+#include "chunks.hh"
 
 void Payload::save(std::ofstream &out,
                    const void *base, std::size_t len)
@@ -85,7 +86,7 @@ bool Payload::load(std::ifstream &in, std::size_t &sum)
 }
 
 Payload::Payload(Payload &&rhs)
-  : base_(rhs.base_), len_(rhs.len_)
+  : len_(rhs.len_), base_(rhs.base_)
 {
   rhs.base_ = nullptr;
   rhs.len_ = 0;
@@ -109,8 +110,26 @@ bool Payload::get(struct iovec &into)
   return true;
 }
 
+static std::size_t sum_lens(const Chunk *base, std::size_t len)
+{
+  std::size_t r = 0;
+  for (std::size_t i = 0; i < len; i++)
+    r += base[i].len;
+  return r;
+}
+
+Payload::Payload(const Chunk *base, std::size_t len)
+  : len_(sum_lens(base, len)), base_(new unsigned char[len_])
+{
+  auto ptr = base_;
+  for (std::size_t i = 0; i < len; i++) {
+    memcpy(ptr, base[i].base, base[i].len);
+    ptr += base[i].len;
+  }
+}
+
 Payload::Payload(const void *base, std::size_t len)
-  : base_(new unsigned char[len]), len_(len)
+  : len_(len), base_(new unsigned char[len_])
 {
   memcpy(base_, base, len);
 }
