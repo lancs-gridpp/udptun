@@ -45,6 +45,8 @@ class SocketAddress {
 
 public:
   SocketAddress(const struct sockaddr *, socklen_t);
+  SocketAddress(SocketAddress &&);
+  SocketAddress &operator =(SocketAddress &&);
   ~SocketAddress();
 
   const struct sockaddr *addr() const {

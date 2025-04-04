@@ -39,9 +39,24 @@
 #include "sockaddrs.hh"
 
 SocketAddress::SocketAddress(const struct sockaddr *base, socklen_t len)
-  : len_(len), base_(base ? new unsigned char[len_] : nullptr)
+  : len_(len), base_(base && len_ > 0 ? new unsigned char[len_] : nullptr)
 {
   if (base_) ::memcpy(base_, base, len_);
+}
+
+SocketAddress::SocketAddress(SocketAddress &&rhs)
+  : len_(rhs.len_), base_(rhs.base_)
+{
+  if (base_)
+    rhs.base_ = nullptr, rhs.len_ = 0;
+}
+
+SocketAddress &SocketAddress::operator =(SocketAddress &&rhs)
+{
+  if (base_) delete[] base_;
+  base_ = rhs.base_, rhs.base_ = nullptr;
+  len_ = rhs.len_, rhs.len_ = 0;
+  return *this;
 }
 
 SocketAddress::~SocketAddress()
