@@ -80,14 +80,14 @@ void ClientTable::on_purge()
 
 void ClientTable::purge(std::chrono::system_clock::time_point before)
 {
-  std::erase_if(fwd, [&rev = this->rev, &before](const auto &item) {
-    if (item.second.last_used < before) {
-      rev.erase(item.second.addr);
-      return true;
+  for (auto iter = fwd.begin(); iter != fwd.end(); ) {
+    if (iter->second.last_used < before) {
+      iter = fwd.erase(iter);
+      rev.erase(iter->second.addr);
     } else {
-      return false;
+      iter++;
     }
-  });
+  }
 }
 
 ClientTable::ClientTable(Scheduler &sched,
