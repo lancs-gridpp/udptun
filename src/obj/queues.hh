@@ -45,6 +45,7 @@
 
 #include "quotas.hh"
 #include "logger.hh"
+#include "chunks.hh"
 
 class Payload;
 
@@ -87,8 +88,13 @@ public:
   PayloadQueue(const std::string &name, std::size_t max_mem, Quota &,
                const std::filesystem::path &dir, user_t);
 
+  void push(const Chunk *arr, std::size_t arrlen);
+
   /* Add another payload to the queue. */
-  void push(const void *, std::size_t);
+  void push(const void *base, std::size_t len) {
+    Chunk ca{base, len};
+    push(&ca, 1);
+  }
 
   /* Examine the head of the queue, or return null. */
   Payload *peek();

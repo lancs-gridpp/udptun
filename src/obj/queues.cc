@@ -210,12 +210,15 @@ void PayloadQueue::unget(Payload &&pl)
   });
 }
 
-void PayloadQueue::push(const void *base, std::size_t len)
+void PayloadQueue::push(const Chunk *arr, std::size_t arrlen)
 {
+  /* Get the total length. */
+  std::size_t len = Chunk::sum_lengths(arr, arrlen);
+
   if (queue_fns.empty() && sz_mem + len < max_mem) {
     /* Add the entry to memory, and account for it. */
     bool was_empty = queue.empty();
-    queue.emplace_back(base, len);
+    queue.emplace_back(arr, arrlen);
     sz_mem += len;
     log.detail([this](std::ostream &out) {
       out << "push ";
@@ -249,10 +252,10 @@ void PayloadQueue::push(const void *base, std::size_t len)
   /* Append the payload to the latest file.  Keep track of the file
      size, so we'll know when to start on a new file.  Update the
      quota manager about the increase in disc usage. */
-  Payload::save(out, base, len);
+  Payload::save(out, arr, arrlen);
   sz_out += len + 2;
-  log.detail([this, base, len](std::ostream &out) {
-    Payload::describe(out, (const unsigned char *) base, len);
+  log.detail([this, arr, arrlen](std::ostream &out) {
+    Payload::describe(out, arr, arrlen);
     out << " +tfil " << sz_out;
   });
   if (sz_out >= max_mem)
