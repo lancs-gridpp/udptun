@@ -53,6 +53,16 @@
 #include "chunks.hh"
 
 void Payload::save(std::ofstream &out,
+                   const Chunk *arr, std::size_t arrlen)
+{
+  std::size_t len = Chunk::sum_lengths(arr, arrlen);
+  unsigned char lenbytes[] = { (unsigned char) (len >> 8), (unsigned char) len };
+  out.write(reinterpret_cast<const char *>(lenbytes), sizeof lenbytes);
+  for (auto iter = arr; iter != arr + arrlen; iter++)
+    out.write(reinterpret_cast<const char *>(iter->base), iter->len);
+}
+
+void Payload::save(std::ofstream &out,
                    const void *base, std::size_t len)
 {
   unsigned char lenbytes[] = { (unsigned char) (len >> 8), (unsigned char) len };
@@ -110,16 +120,8 @@ bool Payload::get(struct iovec &into)
   return true;
 }
 
-static std::size_t sum_lens(const Chunk *base, std::size_t len)
-{
-  std::size_t r = 0;
-  for (std::size_t i = 0; i < len; i++)
-    r += base[i].len;
-  return r;
-}
-
 Payload::Payload(const Chunk *base, std::size_t len)
-  : len_(sum_lens(base, len)), base_(new unsigned char[len_])
+  : len_(Chunk::sum_lengths(base, len)), base_(new unsigned char[len_])
 {
   auto ptr = base_;
   for (std::size_t i = 0; i < len; i++) {

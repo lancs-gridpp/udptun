@@ -50,6 +50,8 @@ class Payload {
 
   static void save(std::ofstream &out,
                    const void *base, std::size_t len);
+  static void save(std::ofstream &out,
+                   const Chunk *arr, std::size_t arrlen);
   friend class PayloadQueue;
 
 public:

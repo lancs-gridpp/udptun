@@ -41,6 +41,12 @@ struct Chunk {
   const void *base;
   std::size_t len;
   Chunk(const void *base, std::size_t len) : base(base), len(len) { }
+  static std::size_t sum_lengths(const Chunk *arr, std::size_t arrlen) {
+    std::size_t r = 0;
+    for (std::size_t i = 0; i < arrlen; i++)
+      r += arr[i].len;
+    return r;
+  }
 };
 
 #endif
