@@ -151,21 +151,36 @@ void Payload::clear()
   len_ = 0;
 }
 
-static unsigned long bufck(const unsigned char *base, std::size_t len)
+static unsigned long bufck(const Chunk *arr, std::size_t arrlen)
 {
   uLong ck = ::crc32_z(0L, Z_NULL, 0);
-  return ::crc32_z(ck, base, len);
+  for (std::size_t i = 0; i < arrlen; i++)
+    ck = ::crc32_z(ck,
+                   reinterpret_cast<const unsigned char *>(arr[i].base),
+                   arr[i].len);
+  return ck;
+}
+
+void Payload::describe(std::ostream &out, const Chunk *arr, std::size_t arrlen)
+{
+  if (arr) {
+    std::size_t len = Chunk::sum_lengths(arr, arrlen);
+    uLong ck = bufck(arr, arrlen);
+    char tmp[10];
+    snprintf(tmp, sizeof tmp, "%08" PRIXFAST32, (uint_fast32_t) ck);
+    out << len << "[" << tmp << "]";
+  } else {
+    out << "empty";
+  }
 }
 
 void Payload::describe(std::ostream &out,
                        const unsigned char *base, std::size_t len)
 {
   if (base) {
-    uLong ck = bufck(base, len);
-    char tmp[10];
-    snprintf(tmp, sizeof tmp, "%08" PRIXFAST32, (uint_fast32_t) ck);
-    out << len << "[" << tmp << "]";
+    Chunk ca{base, len};
+    Payload::describe(out, &ca, 1);
   } else {
-    out << "empty";
+    Payload::describe(out, (const unsigned char *) nullptr, 0);
   }
 }
