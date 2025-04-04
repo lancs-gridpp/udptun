@@ -46,6 +46,7 @@ typedef uint_fast64_t labelset_t;
 constexpr unsigned MAX_LABEL_BYTES = 8;
 constexpr unsigned MAX_LABELS = MAX_LABEL_BYTES * 8;
 
+typedef uint_fast16_t payloadlen_t;
 constexpr unsigned MAX_LENGTH_BYTES = 2;
 constexpr unsigned MAX_LENGTH = 65536;
 

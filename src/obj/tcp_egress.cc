@@ -148,7 +148,7 @@ bool TCPEgress::Connection::process()
 {
   /* Do we have a full packet? */
   labelset_t labels;
-  std::size_t pktlen;
+  payloadlen_t pktlen;
   const unsigned char *base = decode_message(labels, pktlen, buf, len);
   if (!base) return false; // Packet is incomplete.
 

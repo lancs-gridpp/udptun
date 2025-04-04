@@ -74,7 +74,7 @@ bool labels_to_bytes(labelset_t labels, unsigned char *buf,
   return true;
 }
 
-bool length_to_bytes(unsigned len, unsigned char *buf,
+bool length_to_bytes(payloadlen_t len, unsigned char *buf,
                      std::size_t done, std::size_t pos,
                      std::vector<struct iovec> &vec)
 {
@@ -87,7 +87,7 @@ bool length_to_bytes(unsigned len, unsigned char *buf,
   return true;
 }
 
-const unsigned char *decode_message(labelset_t &labels, std::size_t &pktlen,
+const unsigned char *decode_message(labelset_t &labels, payloadlen_t &pktlen,
                                     const unsigned char *base, std::size_t got)
 {
   /* Get the datagram length, if available. */
