@@ -57,6 +57,9 @@ clientid_t ClientTable::seek(const SocketAddress &key)
       continue;
     }
     rev[key] = next_id;
+    log.debug([next_id = this->next_id, &key](std::ostream &out) {
+      out << "assigned " << next_id << " to " << key.str();
+    });
     return next_id++;
   }
 }
@@ -82,6 +85,9 @@ void ClientTable::purge(std::chrono::system_clock::time_point before)
 {
   for (auto iter = fwd.begin(); iter != fwd.end(); ) {
     if (iter->second.last_used < before) {
+      log.debug([iter](std::ostream &out) {
+        out << "discarded " << iter->first << " to " << iter->second.addr.str();
+      });
       iter = fwd.erase(iter);
       rev.erase(iter->second.addr);
     } else {
@@ -93,7 +99,8 @@ void ClientTable::purge(std::chrono::system_clock::time_point before)
 ClientTable::ClientTable(Scheduler &sched,
                          std::chrono::system_clock::duration purge_period,
                          const std::filesystem::path &db)
-  : purge_event(sched, std::bind(&ClientTable::on_purge, this)),
+  : log("udptun.ingress.clientmap", "clientmap"),
+    purge_event(sched, std::bind(&ClientTable::on_purge, this)),
     purge_period(purge_period),
     last_purge(std::chrono::system_clock::now()),
     db(db), next_id(0)

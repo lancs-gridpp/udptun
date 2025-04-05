@@ -44,10 +44,12 @@
 #include "sockaddrs.hh"
 #include "messages.hh"
 #include "timed.hh"
+#include "logger.hh"
 
 class Scheduler;
 
 class ClientTable {
+  Logger log;
   TimedEvent purge_event;
   const std::chrono::system_clock::duration purge_period;
   std::chrono::system_clock::time_point last_purge;
