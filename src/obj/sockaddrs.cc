@@ -37,6 +37,7 @@
 #include <cstring>
 
 #include "sockaddrs.hh"
+#include "network.hh"
 
 SocketAddress::SocketAddress(const struct sockaddr *base, socklen_t len)
   : len_(len), base_(base && len_ > 0 ? new unsigned char[len_] : nullptr)
@@ -114,4 +115,9 @@ std::istream &operator >>(std::istream &lhs, SocketAddress &rhs)
       lhs >> rhs.base_[i];
   }
   return lhs;
+}
+
+std::string SocketAddress::str() const
+{
+  return to_str(addr(), len());
 }

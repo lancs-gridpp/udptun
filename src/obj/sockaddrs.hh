@@ -40,6 +40,7 @@
 #include <sys/socket.h>
 
 #include <iostream>
+#include <string>
 
 class SocketAddress {
   socklen_t len_;
@@ -59,6 +60,7 @@ public:
   }
 
   socklen_t len() const { return len_; }
+  std::string str() const;
   friend bool operator <(const SocketAddress &lhs, const SocketAddress &rhs);
   friend std::ostream &operator <<(std::ostream &lhs, const SocketAddress &rhs);
   friend std::istream &operator >>(std::istream &lhs, SocketAddress &rhs);
