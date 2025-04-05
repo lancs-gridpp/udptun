@@ -27,8 +27,6 @@ MYABSPATH=$(foreach f,$1,$(if $(patsubst /%,,$f),$(MYCURDIR)$f,$f))
 
 binaries.cc += udptun
 udptun_obj += addrent
-udptun_obj += sockaddrs
-udptun_obj += clientid
 udptun_obj += logging
 udptun_obj += marshaling
 udptun_obj += streamer
