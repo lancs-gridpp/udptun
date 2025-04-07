@@ -220,7 +220,7 @@ static int trapped_main(Logger &log, Config &config)
           assert(mt.size() == 4);
           double amount = std::stod(mt[1]);
           if (mt[3].matched) {
-            const char *ptr = ::strchr(sfxs, mt[3].str()[0]);
+            const char *ptr = ::strchr(sfxs, ::tolower(mt[3].str()[0]));
             assert(ptr);
             auto diff = ptr - sfxs;
             for (unsigned i = 0; i <= diff; i++)
