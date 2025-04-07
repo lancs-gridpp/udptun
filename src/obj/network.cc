@@ -44,7 +44,7 @@
 std::string proto_to_str(int proto)
 {
   struct protoent *ent = getprotobynumber(proto);
-  if (ent == nullptr) return "proto?";
+  if (ent == nullptr) return sformat("proto-%d", proto);
   return ent->p_name;
 }
 
@@ -58,7 +58,7 @@ std::string socktype_to_str(int type)
     return "DGRAM";
 
   default:
-    return "SOCK?";
+    return sformat("SOCK_%d", type);
   }
 }
 
@@ -75,7 +75,7 @@ std::string af_to_str(int domain)
     return "UNIX";
 
   default:
-    return "AF?";
+    return sformat("AF_%d", domain);
   }
 }
 
