@@ -47,6 +47,7 @@
 #include "destruction.hh"
 #include "formatting.hh"
 #include "network.hh"
+#include "payloads.hh"
 
 Destination::Destination(const std::string &name, const YAML::Node &cfg)
   : name(name),
@@ -99,9 +100,10 @@ int Destination::send(int family, int protocol,
   Key key(family, protocol);
   auto pos = options.find(key);
   if (pos == options.end()) {
-    log.detail([len, pos](std::ostream &out) {
-      out << "sent " << len << " to "
-          << to_str(pos->second.addr(), pos->second.addrlen());
+    log.detail([len, buf, pos](std::ostream &out) {
+      out << "sent " << len << ":";
+      Payload::describe(out, buf, len);
+      out << " to " << to_str(pos->second.addr(), pos->second.addrlen());
     });
     return ENOSYS;
   }
@@ -109,9 +111,10 @@ int Destination::send(int family, int protocol,
                     pos->second.addr(), pos->second.addrlen());
   if (rc < 0) {
     int ec = errno;
-    log.debug([len, pos, ec](std::ostream &out) {
-      out << "failed to send " << len
-          << " to " << to_str(pos->second.addr(), pos->second.addrlen())
+    log.debug([len, buf, pos, ec](std::ostream &out) {
+      out << "failed to send " << len << ":";
+      Payload::describe(out, buf, len);
+      out << " to " << to_str(pos->second.addr(), pos->second.addrlen())
           << " for " << ec;
 #ifdef WITH_STRERROR_NP
       out << ":" << strerrorname_np(ec);
@@ -121,16 +124,18 @@ int Destination::send(int family, int protocol,
     return ec;
   }
   if ((typeof(len)) rc == len) {
-    log.detail([len, pos](std::ostream &out) {
-      out << "sent " << len << " to "
-          << to_str(pos->second.addr(), pos->second.addrlen());
+    log.detail([len, buf, pos](std::ostream &out) {
+      out << "sent " << len << ":";
+      Payload::describe(out, buf, len);
+      out << " to " << to_str(pos->second.addr(), pos->second.addrlen());
     });
     return 0;
   }
   assert(rc >= 0);
-  log.detail([rc, len, pos](std::ostream &out) {
-    out << "sent " << rc << "<" << len << " to "
-        << to_str(pos->second.addr(), pos->second.addrlen());
+  log.detail([rc, len, buf, pos](std::ostream &out) {
+    out << "sent " << rc << "<" << len << ":";
+      Payload::describe(out, buf, len);
+      out << " to " << to_str(pos->second.addr(), pos->second.addrlen());
   });
   /* TODO: What to do here?  Shouldn't be reachable. */
   return 0;
