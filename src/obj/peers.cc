@@ -44,7 +44,8 @@
 #include "network.hh"
 #include "formatting.hh"
 
-PeerTable::PeerTable(const YAML::Node &cfg)
+PeerTable::PeerTable(const YAML::Node &cfg, PeerTable *backup)
+  : backup(backup)
 {
   if (!cfg) return;
   for (auto iter = cfg.begin(); iter != cfg.end(); iter++) {
@@ -201,7 +202,8 @@ bool PeerTable::seek(std::string &name,
 
   case EAI_SYSTEM:
     throw std::system_error(ec, std::system_category(),
-                            sformat("getnameinfo(%s)", to_str(addr, addrlen).c_str()));
+                            sformat("getnameinfo(%s)",
+                                    to_str(addr, addrlen).c_str()));
 
   case EAI_AGAIN:
     throw std::runtime_error(sformat("getnameinfo(%s) temp failure",
@@ -231,8 +233,18 @@ bool PeerTable::seek(std::string &name,
     throw std::runtime_error(sformat("getnameinfo(%s) overflow",
                                      to_str(addr, addrlen).c_str()));
   }
-  auto pos = tab.find(std::make_pair(addr->sa_family, host));
-  if (pos == tab.end()) return false;
+
+  return seek_resolved(name, std::make_pair(addr->sa_family, host));
+}
+
+bool PeerTable::seek_resolved(std::string &name,
+                              const std::pair<int, std::string> &key)
+{
+  auto pos = tab.find(key);
+  if (pos == tab.end()) {
+    if (!backup) return false;
+    return backup->seek_resolved(name, key);
+  }
   name = pos->second;
   return true;
 }

@@ -45,10 +45,13 @@
 #include <yaml-cpp/yaml.h>
 
 class PeerTable {
+  PeerTable *const backup;
   std::map<std::pair<int, std::string>, std::string> tab;
 
+  bool seek_resolved(std::string &name, const std::pair<int, std::string> &);
+
 public:
-  PeerTable(const YAML::Node &);
+  PeerTable(const YAML::Node &, PeerTable *backup = nullptr);
   bool seek(std::string &name, const struct sockaddr *, socklen_t);
 };
 
