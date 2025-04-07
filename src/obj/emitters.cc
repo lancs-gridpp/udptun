@@ -207,7 +207,8 @@ void Emitter::activate()
   throw std::runtime_error(msg.str());
 }
 
-int Emitter::send(const void *buf, size_t len, Destination &dst, int flags)
+int Emitter::send(const unsigned char *buf, size_t len,
+                  Destination &dst, int flags)
 {
   if (sock < 0)
     return EBADF;

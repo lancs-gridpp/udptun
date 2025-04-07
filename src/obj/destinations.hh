@@ -84,7 +84,7 @@ public:
      there is no matching family and protocol.  Returns 0 on
      success. */
   int send(int family, int protocol,
-           int sockfd, const void *buf, size_t len, int flags);
+           int sockfd, const unsigned char *buf, size_t len, int flags);
 };
 
 #endif

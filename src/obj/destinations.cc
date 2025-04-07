@@ -93,7 +93,8 @@ Destination::Value::Value(const struct sockaddr *addr, socklen_t len)
 
 
 int Destination::send(int family, int protocol,
-                      int sockfd, const void *buf, size_t len, int flags)
+                      int sockfd, const unsigned char *buf,
+                      size_t len, int flags)
 {
   Key key(family, protocol);
   auto pos = options.find(key);
