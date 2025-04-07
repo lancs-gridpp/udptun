@@ -156,7 +156,7 @@ bool TCPEgress::Connection::process()
   std::set<Exit *> chosen_exits;
   for (unsigned lbl = 0; lbl < MAX_LABELS; lbl++) {
     /* Is the label present in the set? */
-    if ((labels & (UINT64_C(1) << lbl)) == 0)
+    if (!labels.test(lbl))
       continue;
     /* Is an exit defined for this label? */
     auto pos = parent.exits.find(lbl);

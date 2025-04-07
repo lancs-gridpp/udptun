@@ -69,7 +69,7 @@ bool labels_to_bytes(labelset_t labels, unsigned char *buf,
   auto m = done > pos ? pos + MAX_LABEL_BYTES - done : MAX_LABEL_BYTES;
   assert(m >= 1);
   for (unsigned i = MAX_LABEL_BYTES - m; i < MAX_LABEL_BYTES; i++)
-    buf[i] = (labels >> (i * 8)) & 0xffu;
+    buf[i] = (labels >> (i * 8)).to_ulong() & 0xffu;
   push_onto(vec, buf + (MAX_LABEL_BYTES - m), m);
   return true;
 }
@@ -102,7 +102,7 @@ const unsigned char *decode_message(labelset_t &labels, payloadlen_t &pktlen,
   /* Extract the labels. */
   labels = 0;
   for (unsigned i = 0; i < MAX_LABEL_BYTES; i++)
-    labels |= base[i] << (8 * i);
+    labels |= labelset_t(base[i]) << (8 * i);
 
   /* Return the start of the payload. */
   return base + (MAX_LABEL_BYTES + MAX_LENGTH_BYTES);
