@@ -6,10 +6,22 @@ On egress, it can listen on multiple TCP addresses, received the annotated packe
 
 # Installation
 
+## Runtime dependencies
+
+```
+sudo apt-get install zlib1g libyaml-cpp0.8
+```
+
+```
+sudo dnf install zlib yaml-cpp
+```
+
+## Build dependencies
+
 Install dependencies using one of the following sets of commands:
 
 ```
-sudo apt-get install build-essential findutils diffutils yaml-cpp-dev zlib1g-dev par
+sudo apt-get install build-essential findutils diffutils yaml-cpp-dev zlib1g-dev
 ```
 
 ```
@@ -24,6 +36,8 @@ git clone https://github.com/simpsonst/binodeps.git
 cd binodeps
 make && sudo make install
 ```
+
+## Local build parameters
 
 Create a file `config.mk` adjacent to `Makefile` to customize.
 For example:
@@ -50,14 +64,8 @@ CPPFLAGS += -DWITH_STRERROR_NP
 CPPFLAGS += -DWITH_SIGNAMES
 ```
 
-Disable the first if you have trouble compiling calls to `strerrorname_np`.
-Disable the second for problems with `strsignal` or `sigabbrev_np`.
-
-If you don't have the `par` command (a filter for reformatting paragraphs), you can work around it with:
-
-```
-PAR=cat -- ; true
-```
+Disable `WITH_STRERROR_NP` if you have trouble compiling calls to `strerrorname_np`.
+Disable `WITH_SIGNAMES` for problems with `strsignal` or `sigabbrev_np`.
 
 On some systems, you might need to explicitly link some libraries:
 
