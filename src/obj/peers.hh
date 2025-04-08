@@ -51,7 +51,9 @@ class PeerTable {
   bool seek_resolved(std::string &name, const std::pair<int, std::string> &);
 
 public:
-  PeerTable(const YAML::Node &, PeerTable *backup = nullptr);
+  PeerTable(PeerTable *backup = nullptr) : backup(backup) { }
+  void clear() { tab.clear(); }
+  void load(const YAML::Node &);
   bool seek(std::string &name, const struct sockaddr *, socklen_t);
 };
 

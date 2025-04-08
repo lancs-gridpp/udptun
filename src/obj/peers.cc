@@ -44,14 +44,13 @@
 #include "network.hh"
 #include "formatting.hh"
 
-PeerTable::PeerTable(const YAML::Node &cfg, PeerTable *backup)
-  : backup(backup)
+void PeerTable::load(const YAML::Node &cfg)
 {
   if (!cfg) return;
   for (auto iter = cfg.begin(); iter != cfg.end(); iter++) {
     /* This is the internal name we use to identify queues. */
     auto id = iter->first.as<std::string>();
-    auto &lst = iter->second;
+    auto lst = iter->second;
     for (auto iter2 = lst.begin(); iter2 != lst.end(); iter2++) {
       /* This is the host string. */
       auto val = iter2->as<std::string>();

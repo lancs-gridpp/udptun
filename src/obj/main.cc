@@ -320,8 +320,6 @@ static int trapped_main(Logger &log, Config &config)
       if (root["egress"]) {
         const auto &egress_root = root["egress"];
 
-        PeerTable peers(egress_root["peers"]);
-
         /* Create an index of named destinations.  Exits will refer to
            these by name.  Any not used after the block exits will be
            quietly destroyed. */
@@ -360,8 +358,9 @@ static int trapped_main(Logger &log, Config &config)
            are established, so that missing dependencies will fail the
            configuration phase. */
         populate<Egress>(egress_index, "tunnels", egress_root,
-                         [&sched, &exit_index](const std::string &inst,
-                                               const YAML::Node &cfg) {
+                         [&sched, &exit_index]
+                         (const std::string &inst,
+                          const YAML::Node &cfg) {
                            return make_egress(sched, inst, exit_index, cfg);
                          });
       }
