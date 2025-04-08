@@ -86,7 +86,7 @@ void Destination::activate()
   }
 }
 
-bool Destination::check(const struct addrinfo &ai)
+bool Destination::check(const struct addrinfo &ai) const
 {
   auto pos = options.find(std::make_pair(ai.ai_family, ai.ai_protocol));
   return pos != options.end();
@@ -94,7 +94,7 @@ bool Destination::check(const struct addrinfo &ai)
 
 int Destination::send(int family, int protocol,
                       int sockfd, const unsigned char *buf,
-                      size_t len, int flags)
+                      size_t len, int flags) const
 {
   auto pos = options.find(std::make_pair(family, protocol));
   if (pos == options.end()) {

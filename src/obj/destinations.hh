@@ -52,7 +52,7 @@ struct addrinfo;
 
 class Destination {
   const std::string name;
-  Logger log;
+  mutable Logger log;
   const bool ipv4, ipv6;
   const std::string host, srv;
 
@@ -64,14 +64,14 @@ public:
 
   /* Check whether a socket created using an address result could talk
      to this destination. */
-  bool check(const struct addrinfo &);
+  bool check(const struct addrinfo &) const;
 
   /* Match the address family and protocol of the given socket to a
      resolved socket address, and send the data.  Return ENOSYS if
      there is no matching family and protocol.  Returns 0 on
      success. */
   int send(int family, int protocol,
-           int sockfd, const unsigned char *buf, size_t len, int flags);
+           int sockfd, const unsigned char *buf, size_t len, int flags) const;
 };
 
 #endif
