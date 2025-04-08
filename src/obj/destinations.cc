@@ -43,6 +43,7 @@
 #include <string>
 #include <system_error>
 
+#include "sockaddrs.hh"
 #include "destinations.hh"
 #include "destruction.hh"
 #include "formatting.hh"
@@ -80,41 +81,38 @@ void Destination::activate()
 
   /* Store each result indexed by address family and protocol. */
   for (auto iter = info; iter; iter = iter->ai_next) {
-    Key key(iter->ai_family, iter->ai_protocol);
-    options.try_emplace(key, iter->ai_addr, iter->ai_addrlen);
+    options.try_emplace(std::make_pair(iter->ai_family, iter->ai_protocol),
+                        iter->ai_addr, iter->ai_addrlen);
   }
 }
 
-Destination::Value::Value(const struct sockaddr *addr, socklen_t len)
-  : buf(len)
+bool Destination::check(const struct addrinfo &ai)
 {
-  assert(buf.size() == len);
-  std::memcpy(buf.data(), addr, len);
+  auto pos = options.find(std::make_pair(ai.ai_family, ai.ai_protocol));
+  return pos != options.end();
 }
-
 
 int Destination::send(int family, int protocol,
                       int sockfd, const unsigned char *buf,
                       size_t len, int flags)
 {
-  Key key(family, protocol);
-  auto pos = options.find(key);
+  auto pos = options.find(std::make_pair(family, protocol));
   if (pos == options.end()) {
     log.detail([len, buf, pos](std::ostream &out) {
       out << "sent " << len << ":";
       Payload::describe(out, buf, len);
-      out << " to " << to_str(pos->second.addr(), pos->second.addrlen());
+      out << " to " << to_str(pos->second.addr(), pos->second.len());
     });
     return ENOSYS;
   }
   int rc = ::sendto(sockfd, buf, len, flags,
-                    pos->second.addr(), pos->second.addrlen());
+                    pos->second.addr(), pos->second.len());
   if (rc < 0) {
     int ec = errno;
     log.debug([len, buf, pos, ec](std::ostream &out) {
       out << "failed to send " << len << ":";
       Payload::describe(out, buf, len);
-      out << " to " << to_str(pos->second.addr(), pos->second.addrlen())
+      out << " to " << to_str(pos->second.addr(), pos->second.len())
           << " for " << ec;
 #ifdef WITH_STRERROR_NP
       out << ":" << strerrorname_np(ec);
@@ -127,7 +125,7 @@ int Destination::send(int family, int protocol,
     log.detail([len, buf, pos](std::ostream &out) {
       out << "sent " << len << ":";
       Payload::describe(out, buf, len);
-      out << " to " << to_str(pos->second.addr(), pos->second.addrlen());
+      out << " to " << to_str(pos->second.addr(), pos->second.len());
     });
     return 0;
   }
@@ -135,7 +133,7 @@ int Destination::send(int family, int protocol,
   log.detail([rc, len, buf, pos](std::ostream &out) {
     out << "sent " << rc << "<" << len << ":";
       Payload::describe(out, buf, len);
-      out << " to " << to_str(pos->second.addr(), pos->second.addrlen());
+      out << " to " << to_str(pos->second.addr(), pos->second.len());
   });
   /* TODO: What to do here?  Shouldn't be reachable. */
   return 0;

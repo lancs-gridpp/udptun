@@ -46,6 +46,9 @@
 #include <yaml-cpp/yaml.h>
 
 #include "logger.hh"
+#include "sockaddrs.hh"
+
+struct addrinfo;
 
 class Destination {
   const std::string name;
@@ -53,31 +56,15 @@ class Destination {
   const bool ipv4, ipv6;
   const std::string host, srv;
 
-  class Key {
-    const int family, protocol;
-
-  public:
-    Key(int family, int protocol) : family(family), protocol(protocol) { }
-    friend bool operator <(const Key &lhs, const Key &rhs) {
-      return lhs.family < rhs.family ? true : lhs.protocol < rhs.protocol;
-    }
-  };
-
-  class Value {
-    std::vector<unsigned char> buf;
-
-  public:
-    Value(const struct sockaddr *, socklen_t);
-    const struct sockaddr *addr() {
-      return reinterpret_cast<sockaddr *>(buf.data());
-    }
-    socklen_t addrlen() { return buf.size(); }
-  };    
-  std::map<Key, Value> options;
+  std::map<std::pair<int, int>, SocketAddress> options;
 
 public:
   Destination(const std::string &name, const YAML::Node &cfg);
   void activate();
+
+  /* Check whether a socket created using an address result could talk
+     to this destination. */
+  bool check(const struct addrinfo &);
 
   /* Match the address family and protocol of the given socket to a
      resolved socket address, and send the data.  Return ENOSYS if

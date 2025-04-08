@@ -26,6 +26,8 @@ MYABSPATH=$(foreach f,$1,$(if $(patsubst /%,,$f),$(MYCURDIR)$f,$f))
 -include udptun-env.mk
 
 binaries.cc += udptun
+udptun_obj += sockaddrs
+udptun_obj += destinations
 udptun_obj += addrent
 udptun_obj += logging
 udptun_obj += marshaling
@@ -35,7 +37,6 @@ udptun_obj += absorbers
 udptun_obj += udp_absorbers
 udptun_obj += signaling
 udptun_obj += addressing
-udptun_obj += destinations
 udptun_obj += emitters
 udptun_obj += payloads
 udptun_obj += queues
