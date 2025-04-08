@@ -204,7 +204,8 @@ void TCPEgress::Connection::handle_fd(uint32_t)
 }
 
 TCPEgress::TCPEgress(const std::string &name,
-                     Scheduler &sched, const YAML::Node &cfg)
+                     Scheduler &sched, const YAML::Node &cfg,
+                     PeerTable *peer_backup)
   : name(name),
     log("udptun.egress.tunnel.tcp", std::string("egress:") + name),
     sched(sched),
@@ -212,7 +213,8 @@ TCPEgress::TCPEgress(const std::string &name,
     ipv4(cfg["ipv4"].as<bool>("true")),
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
-    srv(cfg["port"].as<std::string>()) { }
+    srv(cfg["port"].as<std::string>()),
+    peers(cfg["peers"], peer_backup) { }
 
 void TCPEgress::flush()
 {

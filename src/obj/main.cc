@@ -70,6 +70,7 @@
 #include "formatting.hh"
 #include "fnexp.hh"
 #include "logging.hh"
+#include "peers.hh"
 
 template <class T>
 static void populate(std::map<std::string, std::shared_ptr<T>> &dst,
@@ -318,6 +319,8 @@ static int trapped_main(Logger &log, Config &config)
 
       if (root["egress"]) {
         const auto &egress_root = root["egress"];
+
+        PeerTable peers(egress_root["peers"]);
 
         /* Create an index of named destinations.  Exits will refer to
            these by name.  Any not used after the block exits will be
