@@ -69,6 +69,7 @@ public:
   Emitter(const std::string &name, Scheduler &sched);
   void activate();
   operator bool() { return ready; }
+  bool check(Destination &);
   int send(const unsigned char *buf, size_t len, Destination &, int flags);
   void notify(const user_t &user);
   void forget(const user_t &user);

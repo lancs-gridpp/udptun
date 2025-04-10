@@ -220,6 +220,8 @@ void Emitter::activate()
   throw std::runtime_error(msg.str());
 }
 
+bool Emitter::check(Destination &dst) { return dst.check(family, protocol); }
+
 int Emitter::send(const unsigned char *buf, size_t len,
                   Destination &dst, int flags)
 {
