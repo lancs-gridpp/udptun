@@ -42,12 +42,13 @@ void Egress::activate() { }
 
 Egress *make_egress(Scheduler &sched,
                     const std::string &egress_name,
+                    PeerTable *peers_backup,
                     const std::map<std::string, std::shared_ptr<Exit>> &refs,
                     const YAML::Node &cfg)
 {
   Egress *result = nullptr;
   if (cfg["tcp"]) {
-    result = new TCPEgress(egress_name, sched, cfg["tcp"]);
+    result = new TCPEgress(egress_name, sched, peers_backup, cfg["tcp"]);
   }
   if (result) {
     if (cfg["channels"]) {

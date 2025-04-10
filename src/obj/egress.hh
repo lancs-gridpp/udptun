@@ -47,6 +47,7 @@
 
 class Exit;
 class Scheduler;
+class PeerTable;
 
 struct Egress {
   virtual void activate();
@@ -56,6 +57,7 @@ struct Egress {
 
 Egress *make_egress(Scheduler &,
                     const std::string &egress_name,
+                    PeerTable *peers_backup,
                     const std::map<std::string, std::shared_ptr<Exit>> &refs,
                     const YAML::Node &);
 

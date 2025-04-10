@@ -49,6 +49,7 @@
 #include "descriptor.hh"
 #include "idle.hh"
 #include "messages.hh"
+#include "peers.hh"
 
 class TCPEgress : public Egress {
   class Listener {
@@ -89,12 +90,14 @@ class TCPEgress : public Egress {
   IdleEvent idev;
   const bool ipv4, ipv6;
   const std::string host, srv;
+  PeerTable peers;
   std::map<unsigned, std::set<std::shared_ptr<Exit>>> exits;
 
   void flush();
 
 public:
-  TCPEgress(const std::string &name, Scheduler &sched, const YAML::Node &cfg);
+  TCPEgress(const std::string &name, Scheduler &sched,
+            PeerTable *peers_backup, const YAML::Node &cfg);
   void activate();
   void channel(unsigned, std::shared_ptr<Exit> dst);
 };

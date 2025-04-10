@@ -196,6 +196,7 @@ static int trapped_main(Logger &log, Config &config)
     YAML::Node root = config.get();
 
     Logging::configure(root["logging"]);
+    PeerTable peers;
 
     std::filesystem::path queuedir("/var/spool/udptun");
     if (root["queues"]) {
@@ -319,6 +320,7 @@ static int trapped_main(Logger &log, Config &config)
 
       if (root["egress"]) {
         const auto &egress_root = root["egress"];
+        peers.load(egress_root["peers"]);
 
         /* Create an index of named destinations.  Exits will refer to
            these by name.  Any not used after the block exits will be
@@ -358,10 +360,10 @@ static int trapped_main(Logger &log, Config &config)
            are established, so that missing dependencies will fail the
            configuration phase. */
         populate<Egress>(egress_index, "tunnels", egress_root,
-                         [&sched, &exit_index]
+                         [&sched, &peers, &exit_index]
                          (const std::string &inst,
                           const YAML::Node &cfg) {
-                           return make_egress(sched, inst, exit_index, cfg);
+                           return make_egress(sched, inst, &peers, exit_index, cfg);
                          });
       }
     }
