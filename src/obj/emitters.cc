@@ -87,6 +87,19 @@ Emitter::Emitter(const std::string &name,
   fdev.name(std::string("emitter:") + name + ":descriptor");
 }
 
+Emitter::Emitter(const std::string &name, Scheduler &sched)
+  : name(name),
+    log("udptun.egress.emitter", std::string("emitter:") + name),
+    ipv4(true),
+    ipv6(true),
+    host(""),
+    srv("0"),
+    sock(-1), ready(false),
+    fdev(sched, std::bind(&Emitter::handle_fd, this, std::placeholders::_1))
+{
+  fdev.name(std::string("emitter:") + name + ":descriptor");
+}
+
 void Emitter::activate()
 {
   if (sock >= 0) return;

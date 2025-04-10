@@ -66,6 +66,7 @@ private:
 
 public:
   Emitter(const std::string &name, Scheduler &sched, const YAML::Node &);
+  Emitter(const std::string &name, Scheduler &sched);
   void activate();
   operator bool() { return ready; }
   int send(const unsigned char *buf, size_t len, Destination &, int flags);
