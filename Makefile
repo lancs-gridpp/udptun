@@ -29,6 +29,7 @@ binaries.cc += udptun
 udptun_obj += sockaddrs
 udptun_obj += destinations
 udptun_obj += destbank
+udptun_obj += emcache
 udptun_obj += addrent
 udptun_obj += logging
 udptun_obj += marshaling
