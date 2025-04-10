@@ -88,7 +88,12 @@ void Destination::activate()
 
 bool Destination::check(const struct addrinfo &ai) const
 {
-  auto pos = options.find(std::make_pair(ai.ai_family, ai.ai_protocol));
+  return check(ai.ai_family, ai.ai_protocol);
+}
+
+bool Destination::check(int family, int protocol) const
+{
+  auto pos = options.find(std::make_pair(family, protocol));
   return pos != options.end();
 }
 

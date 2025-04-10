@@ -65,6 +65,7 @@ public:
   /* Check whether a socket created using an address result could talk
      to this destination. */
   bool check(const struct addrinfo &) const;
+  bool check(int family, int protocol) const;
 
   /* Match the address family and protocol of the given socket to a
      resolved socket address, and send the data.  Return ENOSYS if
