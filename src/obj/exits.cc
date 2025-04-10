@@ -44,6 +44,7 @@
 #include "exits.hh"
 #include "emitters.hh"
 #include "formatting.hh"
+#include "destinations.hh"
 
 void make_exits(const std::string &exname, Scheduler &sched, Quota &quota,
                 const std::filesystem::path &dir, const YAML::Node &cfg,

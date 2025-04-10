@@ -45,7 +45,8 @@
 
 #include "logger.hh"
 #include "descriptor.hh"
-#include "destinations.hh"
+
+class Destination;
 
 struct Emitter {
   typedef std::function<void()> user_t;

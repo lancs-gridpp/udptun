@@ -54,6 +54,7 @@
 #include "formatting.hh"
 #include "network.hh"
 #include "emitters.hh"
+#include "destinations.hh"
 
 void Emitter::prime_all()
 {
