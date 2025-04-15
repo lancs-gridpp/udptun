@@ -61,7 +61,7 @@ Egress *make_egress(Scheduler &sched,
     }
   }
 
-  /* */
+  /* List the channels that each label should go to. */
   const auto &chroot = cfg["channels"];
   if (chroot) {
     for (auto iter = label_root.begin(); iter != label_root.end(); iter++) {

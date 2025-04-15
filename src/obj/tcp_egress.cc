@@ -237,6 +237,7 @@ TCPEgress::TCPEgress(const std::string &name,
         /* Map the destination name to a shared pointer to the
            object. */
         auto ptr = dests.seek(dname, salt);
+
         /* Populate a reverse mapping back to destination name, so we
            can meaningfully name the emitter that references this
            destination. */
