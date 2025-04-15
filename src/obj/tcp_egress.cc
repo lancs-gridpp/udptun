@@ -57,6 +57,8 @@
 
 void TCPEgress::Listener::handle_fd(uint32_t)
 {
+  Logger &log = parent.log;
+
   /* A connection has been requested.  Accept it to get the file
      descriptor, and make a Connection object out of it. */
   do {
@@ -106,12 +108,21 @@ void TCPEgress::Listener::handle_fd(uint32_t)
       if (parent.peers.seek(peer, &addr, addrlen)) {
         auto pos = parent.exits.find(peer);
         if (pos == parent.exits.end()) {
+          log.warn([this, &peer](std::ostream &out) {
+            out << sock << ": could not find entry for peer " << peer;
+          });
           ::close(clsock);
         } else {
+          log.info([this, &peer](std::ostream &out) {
+            out << sock << ": peer connected: " << peer;
+          });
           exitmap_t &exits = pos->second;
           parent.conns.emplace_back(parent, clsock, exits);
         }
       } else {
+        log.warn([this, &addr, addrlen](std::ostream &out) {
+          out << sock << ":unknown peer " << SocketAddress(&addr, addrlen);
+        });
         ::close(clsock);
       }
       break;
