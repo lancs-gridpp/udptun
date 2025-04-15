@@ -361,7 +361,7 @@ static int trapped_main(Logger &log, Config &config)
       /* If we've received SIGINT or SIGTERM, exit this loop as soon
          as we're idle.  Set a timer so we will quit anyway after a
          short time. */
-      if (quit) {
+      if (quit && !quit_timeout) {
         log.info("quit detected");
         idle.set();
         quit_timeout.set(std::chrono::seconds(10));
