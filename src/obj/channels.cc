@@ -71,6 +71,11 @@ void Channel::activate()
   queue.poke();
 }
 
+const std::string &Channel::identify()
+{
+  return name;
+}
+
 bool Channel::describe(std::vector<struct iovec> &iov)
 {
   if (current == nullptr) {

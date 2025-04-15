@@ -60,6 +60,8 @@ public:
   /* Be advised that an attempt to send failed, and so the message
      should not be discarded, and resent from scratch. */
   virtual void failed();
+
+  virtual const std::string &identify() = 0;
 };
 
 #endif

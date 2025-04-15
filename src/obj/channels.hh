@@ -76,6 +76,7 @@ public:
   ~Channel();
   void activate();
   void submit(const void *, std::size_t);
+  const std::string &identify();
 };
 
 

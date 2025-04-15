@@ -272,6 +272,10 @@ void TCPIngress::ready(Streamer &src)
   /* Ignore a source that we already know about. */
   if (streamers.find(&src) != streamers.end()) return;
 
+  log.detail([&src](auto &out) {
+    out << "got a new source " << src.identify();
+  });
+
   /* Include this source. */
   bool was_empty = streamers.empty();
   streamers.insert(&src);
