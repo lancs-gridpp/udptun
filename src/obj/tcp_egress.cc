@@ -121,7 +121,7 @@ void TCPEgress::Listener::handle_fd(uint32_t)
         }
       } else {
         log.warn([this, &addr, addrlen](std::ostream &out) {
-          out << sock << ":unknown peer " << SocketAddress(&addr, addrlen);
+          out << sock << ":unknown peer " << to_str(&addr, addrlen);
         });
         ::close(clsock);
       }
