@@ -62,8 +62,8 @@ class TCPIngress : public Ingress {
   const std::string name;
   Logger log;
   const bool ipv4, ipv6;
-  const std::string host;
-  const std::string srv;
+  const std::string host, bind_host;
+  const std::string srv, bind_srv;
   int sock;
   bool connected, upout_ready;
 

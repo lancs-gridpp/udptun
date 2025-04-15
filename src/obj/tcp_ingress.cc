@@ -43,7 +43,9 @@
 
 #include "formatting.hh"
 #include "streamer.hh"
+#include "destruction.hh"
 #include "tcp_ingress.hh"
+#include "network.hh"
 
 TCPIngress::TCPIngress(const std::string &name,
                        Scheduler &sched,
@@ -53,7 +55,9 @@ TCPIngress::TCPIngress(const std::string &name,
     ipv4(cfg["ipv4"].as<bool>("true")),
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
+    bind_host(cfg["bind_host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>()),
+    bind_srv(cfg["bind_port"].as<std::string>("0")),
     sock(-1), connected(false), upout_ready(false),
     fdev(sched, [this](uint32_t evs) { descriptor_ready(evs); }),
     rstev(sched, [this]() { initiate_lookup(); }),
@@ -147,12 +151,44 @@ void TCPIngress::address_resolved(const struct addrinfo *p)
 
 void TCPIngress::try_connect()
 {
+  assert(sock < 0);
+  struct addrinfo *bind_info = nullptr;
+  LegacyDestructor infoDestr([&info = bind_info]() {
+    if (info) freeaddrinfo(info);
+  });
+  {
+    log.info("looking for bind address");
+    struct addrinfo hints;
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_protocol = 0;
+    get_address_info(bind_info, bind_host.empty() ? nullptr : bind_host.c_str(),
+                     bind_srv.c_str(), &hints,
+                     sformat("egress:%s", name.c_str()).c_str());
+  }
+
   do {
     /* Create the socket with the right parameters. */
+    struct addrinfo *bind_curr = nullptr;
     while (ainf) {
-      sock = socket(ainf->ai_family, SOCK_STREAM, ainf->ai_protocol);
-      if (sock >= 0)
-        break;
+      /* Find a bind address matching by family and protocol. */
+      for (bind_curr = bind_info; bind_curr &&
+             (bind_curr->ai_family != ainf->ai_family ||
+              bind_curr->ai_protocol != ainf->ai_protocol);
+           bind_curr = bind_curr->ai_next)
+        ;
+      if (bind_curr) {
+        /* Try to create a socket. */
+        sock = socket(ainf->ai_family, SOCK_STREAM, ainf->ai_protocol);
+        if (sock >= 0)
+          break;
+      } else {
+        log.debug([this](auto &out) {
+          out << "can't bind to reach " << to_str(ainf->ai_addr, ainf->ai_addrlen);
+        });
+      }
       ainf = ainf->ai_next;
     }
 
@@ -160,6 +196,12 @@ void TCPIngress::try_connect()
       /* We failed to open a socket.  Try again in a bit. */
       rstev.set(std::chrono::seconds(30));
       return;
+    }
+
+    /* Try to bind the socket before connecting. */
+    if (::bind(sock, bind_curr->ai_addr, bind_curr->ai_addrlen) != 0) {
+      ::close(sock);
+      continue;
     }
 
     /* Make the socket non-blocking. */
