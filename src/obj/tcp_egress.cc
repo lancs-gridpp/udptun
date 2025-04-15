@@ -231,9 +231,18 @@ TCPEgress::TCPEgress(const std::string &name,
   peers.get_names(peer_names);
   for (const std::string &peer : peer_names) {
     unsigned salt = std::hash<std::string>{}(peer);
+    log.debug([&peer, &salt](std::ostream &out) {
+      out << "peer " << peer << " has salt " << salt;
+    });
 
-    for (auto &ent : channels)
+    for (auto &ent : channels) {
+      log.debug([&ent](std::ostream &out) {
+        out << "resolving for " << ent.first << " (" << ent.second.name << ")";
+      });
       for (auto dname : ent.second.dests) {
+        log.debug([&dname](std::ostream &out) {
+          out << "resolving " << dname;
+        });
         /* Map the destination name to a shared pointer to the
            object. */
         auto ptr = dests.seek(dname, salt);
@@ -243,6 +252,7 @@ TCPEgress::TCPEgress(const std::string &name,
            destination. */
         requirement[peer][ptr] = dname;
       }
+    }
   }
 }
 
