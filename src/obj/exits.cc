@@ -46,27 +46,6 @@
 #include "formatting.hh"
 #include "destinations.hh"
 
-#if 0
-void make_exits(const std::string &exname, Scheduler &sched, Quota &quota,
-                const std::filesystem::path &dir, const YAML::Node &cfg,
-                destination_index_t dests,
-                std::map<std::string, std::shared_ptr<Exit>> &out)
-{
-  auto emitter = std::make_shared<Emitter>(exname, sched, cfg["udp"]);
-  const auto end = cfg["queues"].end();
-  for (auto iter = cfg["queues"].begin(); iter != end; iter++) {
-    auto name = iter->first.as<std::string>();
-    auto dest_name = iter->second.as<std::string>();
-    auto dest = dests(dest_name);
-    if (!dest)
-      throw std::runtime_error(sformat("unknown destination %s for exit %s",
-                                       dest_name.c_str(), name.c_str()));
-    out[name] =
-      std::make_shared<Exit>(name, sched, quota, dir / name, emitter, dest);
-  }
-}
-#endif
-
 Exit::Exit(const std::string &name,
            Scheduler &sched,
            Quota &quota,

@@ -317,41 +317,6 @@ static int trapped_main(Logger &log, Config &config)
         DestinationBank dbank(egress_root["destinations"],
                               egress_root["groups"]);
 
-#if 0
-        /* Create an index of named destinations.  Exits will refer to
-           these by name.  Any not used after the block exits will be
-           quietly destroyed. */
-        std::map<std::string, std::shared_ptr<Destination>> destinations;
-        populate<Destination>(destinations, "destinations", egress_root,
-                              [](const std::string &inst,
-                                 const YAML::Node &cfg) {
-                                return new Destination(inst, cfg);
-                              });
-        auto find_dest = [&didx = destinations](const std::string &dname) {
-          auto pos = didx.find(dname);
-          if (pos == didx.end())
-            return std::shared_ptr<Destination>();
-          return pos->second;
-        };
-
-        /* Create an index of named exits, and the emitters they
-           share.  Each exit uses exactly one emitter, and keeps a
-           shared reference to it.  Each exit also uses exactly one
-           named destination, preventing it from being destroyed.  Any
-           resources not used after the block exits will be quietly
-           destroyed.  An exit retains a message queue, indexed by its
-           name. */
-        std::map<std::string, std::shared_ptr<Exit>> exit_index;
-        if (egress_root["sockets"]) {
-          const auto &socket_root = egress_root["sockets"];
-          for (auto iter = socket_root.begin();
-               iter != socket_root.end(); iter++) {
-            make_exits(iter->first.as<std::string>(), sched, quota,
-                       egress_qdir, iter->second, find_dest, exit_index);
-          }
-        }
-#endif
-
         /* Create the configured egresses, using the available exits.
            Sockets are not created at this stage; only dependencies
            are established, so that missing dependencies will fail the
