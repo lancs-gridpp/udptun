@@ -66,66 +66,7 @@ void PeerTable::load(const YAML::Node &cfg)
       /* Resolve the host into its many forms. */
       struct addrinfo *info = nullptr;
       LegacyDestructor infoDestr([&info]() { if (info) freeaddrinfo(info); });
-      int rc = getaddrinfo(val.c_str(), nullptr, &hints, &info);
-      int ec = errno;
-      switch (rc) {
-      case 0:
-        break;
-
-      case EAI_SYSTEM:
-        throw std::system_error(ec, std::system_category(),
-                                sformat("getaddrinfo(%s)",
-                                        val.c_str()));
-
-      default:
-        throw std::runtime_error(sformat("getaddrinfo(%s) unk %d",
-                                         val.c_str(), rc));
-
-      case EAI_ADDRFAMILY:
-        throw std::runtime_error(sformat("getaddrinfo(%s) AF %s unavailable",
-                                         val.c_str(),
-                                         af_to_str(hints.ai_family).c_str()));
-
-      case EAI_AGAIN:
-        throw std::runtime_error(sformat("getaddrinfo(%s) temp failure",
-                                         val.c_str()));
-
-      case EAI_BADFLAGS:
-        throw std::runtime_error(sformat("getaddrinfo(%s) bad flags",
-                                         val.c_str()));
-
-      case EAI_FAIL:
-        throw std::runtime_error(sformat("getaddrinfo(%s) failure",
-                                         val.c_str()));
-
-      case EAI_FAMILY:
-        throw std::runtime_error(sformat("getaddrinfo(%s) no AF %s",
-                                         val.c_str(),
-                                         af_to_str(hints.ai_family).c_str()));
-
-      case EAI_MEMORY:
-        throw std::runtime_error(sformat("getaddrinfo(%s) out of memory",
-                                         val.c_str()));
-
-      case EAI_NODATA:
-        throw std::runtime_error(sformat("getaddrinfo(%s) no addrs for host",
-                                         val.c_str()));
-
-      case EAI_NONAME:
-        throw std::runtime_error(sformat("getaddrinfo(%s) unk name/service",
-                                         val.c_str()));
-
-      case EAI_SERVICE:
-        throw std::runtime_error(sformat("getaddrinfo(%s) no serv"
-                                         " for host/sock",
-                                         val.c_str()));
-
-      case EAI_SOCKTYPE:
-        throw std::runtime_error(sformat("getaddrinfo(%s) no sock %s",
-                                         val.c_str(),
-                                         socktype_to_str(hints.ai_socktype)
-                                         .c_str()));
-      }
+      get_address_info(info, val.c_str(), nullptr, &hints, "peertab");
 
       /* For each result, convert the address back into host and
          service, and use the address family and the host as a key
@@ -143,7 +84,7 @@ void PeerTable::load(const YAML::Node &cfg)
 
         default:
           throw std::runtime_error(sformat("getnameinfo(%s) unk %d",
-                                           val.c_str(), rc));
+                                           val.c_str(), nirc));
 
         case EAI_SYSTEM:
           throw std::system_error(niec, std::system_category(),

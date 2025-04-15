@@ -74,12 +74,8 @@ void Destination::activate()
 
   struct addrinfo *info = nullptr;
   LegacyDestructor infoDestr([&info]() { if (info) freeaddrinfo(info); });
-  int rc = getaddrinfo(host.c_str(),
-                       srv.empty() ? nullptr : srv.c_str(),
-                       &hints, &info);
-  if (rc < 0)
-    throw std::system_error(errno, std::system_category(),
-                            sformat("getaddrinfo(%s)", host.c_str()));
+  get_address_info(info, host.c_str(), srv.empty() ? nullptr : srv.c_str(),
+                   &hints, sformat("destination:%s", name.c_str()).c_str());
 
   /* Store each result indexed by address family and protocol. */
   for (auto iter = info; iter; iter = iter->ai_next) {

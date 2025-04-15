@@ -85,67 +85,8 @@ void UDPAbsorber::activate()
   /* Resolve the host. */
   struct addrinfo *info = nullptr;
   LegacyDestructor infoDestr([&info]() { if (info) freeaddrinfo(info); });
-  int rc = getaddrinfo(host.c_str(),
-                       srv.empty() ? nullptr : srv.c_str(),
-                       &hints, &info);
-  int ec = errno;
-  switch (rc) {
-  case 0:
-    break;
-
-  case EAI_SYSTEM:
-    throw std::system_error(ec, std::system_category(),
-                            sformat("getaddrinfo(%s:%s)",
-                                    host.c_str(), srv.c_str()));
-
-  default:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) unk %d",
-                                     host.c_str(), srv.c_str(), rc));
-
-  case EAI_ADDRFAMILY:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) AF %s unavailable",
-                                     host.c_str(), srv.c_str(),
-                                     af_to_str(hints.ai_family).c_str()));
-
-  case EAI_AGAIN:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) temp failure",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_BADFLAGS:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) bad flags",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_FAIL:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) failure",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_FAMILY:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no AF %s",
-                                     host.c_str(), srv.c_str(),
-                                     af_to_str(hints.ai_family).c_str()));
-
-  case EAI_MEMORY:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) out of memory",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_NODATA:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no addrs for host",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_NONAME:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) unk name/service",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_SERVICE:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no serv for host/sock",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_SOCKTYPE:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no sock %s",
-                                     host.c_str(), srv.c_str(),
-                                     socktype_to_str(hints.ai_socktype)
-                                     .c_str()));
-  }
+  get_address_info(info, host.c_str(), srv.empty() ? nullptr : srv.c_str(),
+                   &hints, sformat("absorber:%s", name.c_str()).c_str());
 
   /* Try to make a socket out of each offered entry, until one works.
      Store up the errors of the others, but only throw an exception if
