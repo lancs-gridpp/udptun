@@ -57,10 +57,12 @@ Destination::Destination(const std::string &name, const YAML::Node &cfg)
     ipv6(cfg ? cfg["ipv6"].as<bool>("true") : true),
     host(cfg ? cfg["host"].as<std::string>("localhost")
          : std::string("localhost")),
-    srv(cfg ? cfg["port"].as<std::string>() : std::string()) { }
+    srv(cfg ? cfg["port"].as<std::string>() : std::string()),
+    activated(false) { }
 
 void Destination::activate()
 {
+  if (activated) return;
   log.debug("activating");
 
   /* Restrict what we're looking for. */
@@ -84,6 +86,8 @@ void Destination::activate()
     options.try_emplace(std::make_pair(iter->ai_family, iter->ai_protocol),
                         iter->ai_addr, iter->ai_addrlen);
   }
+
+  activated = true;
 }
 
 bool Destination::check(const struct addrinfo &ai) const
@@ -93,6 +97,9 @@ bool Destination::check(const struct addrinfo &ai) const
 
 bool Destination::check(int family, int protocol) const
 {
+  if (!activated)
+    throw std::runtime_error(sformat("too soon to check against dest %s",
+                                     name.c_str()));
   auto pos = options.find(std::make_pair(family, protocol));
   return pos != options.end();
 }
@@ -101,6 +108,10 @@ int Destination::send(int family, int protocol,
                       int sockfd, const unsigned char *buf,
                       size_t len, int flags) const
 {
+  if (!activated)
+    throw std::runtime_error(sformat("too soon to send to dest %s",
+                                     name.c_str()));
+  assert(sockfd >= 0);
   auto pos = options.find(std::make_pair(family, protocol));
   if (pos == options.end()) {
     log.detail([len, buf, pos](std::ostream &out) {

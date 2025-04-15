@@ -55,6 +55,7 @@ class Destination {
   mutable Logger log;
   const bool ipv4, ipv6;
   const std::string host, srv;
+  bool activated;
 
   std::map<std::pair<int, int>, SocketAddress> options;
 
