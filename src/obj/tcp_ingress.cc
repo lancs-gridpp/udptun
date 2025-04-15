@@ -81,6 +81,7 @@ void TCPIngress::descriptor_ready(uint32_t evs)
   if (evs & EPOLLRDHUP) {
     /* The peer closed the connection.  Discard the socket, and try
        again in a while. */
+    log.debug("peer closed");
     clear_socket();
     rstev.set(std::chrono::seconds(30));
     return;
@@ -90,6 +91,7 @@ void TCPIngress::descriptor_ready(uint32_t evs)
      completing? */
   assert(evs & EPOLLOUT);
   if (!connected) {
+    log.debug("connected");
     int soerr;
     socklen_t soerrlen = sizeof soerr;
     int rc = getsockopt(sock, SOL_SOCKET, SO_ERROR, &soerr, &soerrlen);
@@ -110,6 +112,7 @@ void TCPIngress::descriptor_ready(uint32_t evs)
     return;
   }
 
+  log.debug("writable");
   upout_ready = true;
   try_send();
 }
@@ -131,6 +134,7 @@ void TCPIngress::initiate_lookup()
   assert(sock < 0);
 
   /* Resolve the node and service. */
+  log.debug("initiating look-up");
   ainf = nullptr;
   struct addrinfo hint;
   memset(&hint, 0, sizeof hint);
@@ -143,6 +147,7 @@ void TCPIngress::initiate_lookup()
 
 void TCPIngress::address_resolved(const struct addrinfo *p)
 {
+  log.debug("address resolved");
   /* Record the initial address to try. */
   ainf = p;
   connected = false;

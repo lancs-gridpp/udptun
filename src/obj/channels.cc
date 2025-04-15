@@ -67,6 +67,8 @@ Channel::~Channel()
 
 void Channel::activate()
 {
+  log.info("activating");
+
   /* Tell the queue to tell us if it already has some data. */
   queue.poke();
 }

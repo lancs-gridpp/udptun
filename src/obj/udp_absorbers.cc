@@ -73,6 +73,7 @@ UDPAbsorber::~UDPAbsorber()
 void UDPAbsorber::activate()
 {
   if (sock >= 0) return;
+  log.info("activating");
 
   /* Restrict what we're looking for. */
   struct addrinfo hints;
@@ -107,6 +108,7 @@ void UDPAbsorber::activate()
     this->sock = sock;
     sockev.set(this->sock, EPOLLIN);
 
+    log.info("activating channels");
     for (auto &c : channels)
       c->activate();
     return;
