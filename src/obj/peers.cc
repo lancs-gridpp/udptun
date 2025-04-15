@@ -125,12 +125,12 @@ void PeerTable::load(const YAML::Node &cfg)
   }
 }
 
-std::set<std::string> PeerTable::names()
+void PeerTable::get_names(std::set<std::string> &result)
 {
-  std::set<std::string> result;
+  if (backup)
+    backup->get_names(result);
   for (auto &ent : tab)
     result.insert(ent.second);
-  return result;
 }
 
 bool PeerTable::seek(std::string &name,

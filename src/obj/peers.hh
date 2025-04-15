@@ -56,7 +56,7 @@ public:
   void clear() { tab.clear(); }
   void load(const YAML::Node &);
   bool seek(std::string &name, const struct sockaddr *, socklen_t);
-  std::set<std::string> names();
+  void get_names(std::set<std::string> &);
 };
 
 #endif

@@ -227,7 +227,9 @@ TCPEgress::TCPEgress(const std::string &name,
     srv(cfg["port"].as<std::string>()),
     quota(quota), qdir(qdir), peers(peers_backup), channels(channels)
 {
-  for (const std::string &peer : peers.names()) {
+  std::set<std::string> peer_names;
+  peers.get_names(peer_names);
+  for (const std::string &peer : peer_names) {
     unsigned salt = std::hash<std::string>{}(peer);
 
     for (auto &ent : channels)
