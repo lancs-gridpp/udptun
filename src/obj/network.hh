@@ -46,4 +46,12 @@ std::string socktype_to_str(int);
 std::string proto_to_str(int);
 std::string to_str(const struct sockaddr *addr, socklen_t addrlen);
 
+struct addrinfo;
+
+void get_address_info(struct addrinfo *&,
+                      const char *host,
+                      const char *serv,
+                      const struct addrinfo *hint,
+                      const char *ctxt);
+
 #endif

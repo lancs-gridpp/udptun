@@ -107,3 +107,93 @@ std::string to_str(const struct sockaddr *addr, socklen_t addrlen)
     throw std::runtime_error(sformat("unreachable %s:%d", __FILE__, __LINE__));
   }
 }
+
+void get_address_info(struct addrinfo *&info,
+                      const char *host,
+                      const char *serv,
+                      const struct addrinfo *hints,
+                      const char *ctxt)
+{
+  int rc = getaddrinfo(host, serv, hints, &info);
+  int ec = errno;
+  switch (rc) {
+  case 0:
+    break;
+
+  case EAI_SYSTEM:
+    throw std::system_error(ec, std::system_category(),
+                            sformat("%s: getaddrinfo(%s:%s)",
+                                    ctxt,
+                                    host ? host : "#",
+                                    serv ? serv : "#"));
+
+  default:
+    throw std::runtime_error(sformat("%s: getaddrinfo(%s:%s) unk %d",
+                                     ctxt,
+                                     host ? host : "#",
+                                     serv ? serv : "#", rc));
+
+  case EAI_ADDRFAMILY:
+    throw std::runtime_error(sformat("%s: getaddrinfo(%s:%s) AF %s unavailable",
+                                     ctxt,
+                                     host ? host : "#",
+                                     serv ? serv : "#",
+                                     af_to_str(hints->ai_family).c_str()));
+
+  case EAI_AGAIN:
+    throw std::runtime_error(sformat("%s: getaddrinfo(%s:%s) temp failure",
+                                     ctxt,
+                                     host ? host : "#",
+                                     serv ? serv : "#"));
+
+  case EAI_BADFLAGS:
+    throw std::runtime_error(sformat("%s: getaddrinfo(%s:%s) bad flags",
+                                     ctxt,
+                                     host ? host : "#",
+                                     serv ? serv : "#"));
+
+  case EAI_FAIL:
+    throw std::runtime_error(sformat("%s: getaddrinfo(%s:%s) failure",
+                                     ctxt,
+                                     host ? host : "#",
+                                     serv ? serv : "#"));
+
+  case EAI_FAMILY:
+    throw std::runtime_error(sformat("%s: getaddrinfo(%s:%s) no AF %s",
+                                     ctxt,
+                                     host ? host : "#",
+                                     serv ? serv : "#",
+                                     af_to_str(hints->ai_family).c_str()));
+
+  case EAI_MEMORY:
+    throw std::runtime_error(sformat("%s: getaddrinfo(%s:%s) out of memory",
+                                     ctxt,
+                                     host ? host : "#",
+                                     serv ? serv : "#"));
+
+  case EAI_NODATA:
+    throw std::runtime_error(sformat("%s: getaddrinfo(%s:%s) no addrs for host",
+                                     ctxt,
+                                     host ? host : "#",
+                                     serv ? serv : "#"));
+
+  case EAI_NONAME:
+    throw std::runtime_error(sformat("%s: getaddrinfo(%s:%s) unk name/service",
+                                     ctxt,
+                                     host ? host : "#",
+                                     serv ? serv : "#"));
+
+  case EAI_SERVICE:
+    throw std::runtime_error(sformat("%s: getaddrinfo(%s:%s) no serv for host/sock",
+                                     ctxt,
+                                     host ? host : "#",
+                                     serv ? serv : "#"));
+
+  case EAI_SOCKTYPE:
+    throw std::runtime_error(sformat("%s: getaddrinfo(%s:%s) no sock %s", ctxt,
+                                     host ? host : "#",
+                                     serv ? serv : "#",
+                                     socktype_to_str(hints->ai_socktype)
+                                     .c_str()));
+  }
+}

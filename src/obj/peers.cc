@@ -184,6 +184,14 @@ void PeerTable::load(const YAML::Node &cfg)
   }
 }
 
+std::set<std::string> PeerTable::names()
+{
+  std::set<std::string> result;
+  for (auto &ent : tab)
+    result.insert(ent.second);
+  return result;
+}
+
 bool PeerTable::seek(std::string &name,
                      const struct sockaddr *addr, socklen_t addrlen)
 {

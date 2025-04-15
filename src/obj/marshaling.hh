@@ -37,6 +37,8 @@
 #ifndef marshaling_included
 #define marshaling_included
 
+#include <vector>
+
 #include "messages.hh"
 
 struct iovec;
@@ -46,14 +48,17 @@ void push_onto(std::vector<struct iovec> &vec, unsigned char *base,
 void push_onto(std::vector<struct iovec> &vec, const unsigned char *base,
                std::size_t len);
 
-bool labels_to_bytes(labelset_t, unsigned char *,
-                     std::size_t done, std::size_t pos,
-                     std::vector<struct iovec> &);
 bool length_to_bytes(payloadlen_t len, unsigned char *,
                      std::size_t done, std::size_t pos,
                      std::vector<struct iovec> &);
+bool label_to_bytes(label_t, unsigned char *,
+                    std::size_t done, std::size_t pos,
+                    std::vector<struct iovec> &);
 
-const unsigned char *decode_message(labelset_t &, payloadlen_t &pktlen,
+/* If the message is complete in the buffer, extract the label and
+   payload length, and return the start of the payload.  Otherwise,
+   return null. */
+const unsigned char *decode_message(label_t &, payloadlen_t &,
                                     const unsigned char *, std::size_t got);
 
 #endif

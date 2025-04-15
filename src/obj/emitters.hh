@@ -40,6 +40,7 @@
 #include <cstdint>
 #include <functional>
 #include <set>
+#include <map>
 
 #include <yaml-cpp/yaml.h>
 
@@ -48,15 +49,36 @@
 
 class Destination;
 
+class Emitter;
+
+typedef std::set<std::shared_ptr<Destination>> destination_set_t;
+typedef std::map<std::shared_ptr<Destination>, std::shared_ptr<Emitter>>
+destination_emitter_map_t;
+
+class EmitterMaker {
+  destination_set_t &required;
+  struct addrinfo *info;
+  const struct addrinfo *chosen;
+  int sock;
+  destination_set_t matched_;
+
+public:
+  EmitterMaker(destination_set_t &required);
+  ~EmitterMaker();
+  const destination_set_t &matched() { return matched_; }
+  void make(const std::string &name, Scheduler &,
+            destination_emitter_map_t &result);
+};
+
 struct Emitter {
+  friend class EmitterMaker;
   typedef std::function<void()> user_t;
 
 private:
   const std::string name;
   Logger log;
-  const bool ipv4, ipv6;
-  const std::string host, srv;
-  int sock, family, protocol;
+  int sock;
+  const int family, protocol;
   bool ready;
   DescriptorEvent fdev;
 
@@ -65,12 +87,11 @@ private:
   void handle_fd(uint32_t);
   void prime_all();
 
+  Emitter(const std::string &name, Scheduler &sched,
+          int sock, int family, int protocol);
+
 public:
-  Emitter(const std::string &name, Scheduler &sched, const YAML::Node &);
-  Emitter(const std::string &name, Scheduler &sched);
-  void activate();
   operator bool() { return ready; }
-  bool check(Destination &);
   int send(const unsigned char *buf, size_t len, Destination &, int flags);
   void notify(const user_t &user);
   void forget(const user_t &user);

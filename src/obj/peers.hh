@@ -41,6 +41,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 
 #include <yaml-cpp/yaml.h>
 
@@ -55,6 +56,7 @@ public:
   void clear() { tab.clear(); }
   void load(const YAML::Node &);
   bool seek(std::string &name, const struct sockaddr *, socklen_t);
+  std::set<std::string> names();
 };
 
 #endif

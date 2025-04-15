@@ -50,11 +50,95 @@
 #include <algorithm>
 #include <functional>
 
-#include "destruction.hh"
 #include "formatting.hh"
 #include "network.hh"
 #include "emitters.hh"
 #include "destinations.hh"
+
+EmitterMaker::EmitterMaker(destination_set_t &required)
+  : required(required), info(nullptr), chosen(nullptr), sock(-1)
+{
+  /* Get address/socket configurations for sending out datagrams. */
+  struct addrinfo hints;
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_flags = 0;
+  hints.ai_protocol = 0;
+  get_address_info(info, nullptr, "0", &hints, "emitter");
+
+  /* Count how many of the required destinations are compatible with
+     each entry. */
+  std::map<struct addrinfo *, unsigned> counters;
+  for (auto iter = info; iter; iter = iter->ai_next) {
+    for (auto ptr : required) {
+      if (ptr->check(iter->ai_family, iter->ai_protocol)) {
+        auto [ pos, ins ] = counters.try_emplace(iter, 0);
+        pos->second++;
+      }
+    }
+  }
+  if (counters.empty())
+    return;
+
+  /* Sort address entries by the count of matching destinations
+     (descending). */
+  std::vector<std::pair<struct addrinfo *, unsigned>>
+    seq(counters.begin(), counters.end());
+  std::sort(seq.begin(), seq.end(), [](const auto &lhs, const auto &rhs) {
+    return lhs.second > rhs.second;
+  });
+
+  /* Create a socket and bind it, preferring entries with more
+     matching destinations. */
+  for ( ; !seq.empty(); seq.erase(seq.begin())) {
+    const auto &best = *seq[0].first;
+    int sock = ::socket(best.ai_family, SOCK_DGRAM, best.ai_protocol);
+    if (sock < 0) continue;
+    if (::bind(sock, best.ai_addr, best.ai_addrlen) != 0) {
+      ::close(sock);
+      continue;
+    }
+
+    this->sock = sock;
+    this->chosen = &best;
+
+    /* Make available a set of destinations which matched.  The user
+       might use this to name the emitter. */
+    for (auto diter = required.begin(); diter != required.end(); diter++)
+      if ((*diter)->check(chosen->ai_family, chosen->ai_protocol))
+        matched_.insert(*diter);
+
+    return;
+  }
+}
+
+EmitterMaker::~EmitterMaker()
+{
+  if (info) ::freeaddrinfo(info);
+  if (sock >= 0) ::close(sock);
+}
+
+void EmitterMaker::make(const std::string &name, Scheduler &sched,
+                        destination_emitter_map_t &result)
+{
+  if (sock < 0) return;
+
+  std::shared_ptr<Emitter> r =
+    std::shared_ptr<Emitter>(new Emitter(name, sched, sock,
+                                         chosen->ai_family, chosen->ai_protocol));
+  sock = -1;
+
+  /* Remove the destinations matching this socket from 'required', and
+     add map them to the result. */
+  for (auto ptr : matched_) {
+    required.erase(ptr);
+    result[ptr] = r;
+  }
+}
+
+
+
 
 void Emitter::prime_all()
 {
@@ -73,155 +157,16 @@ void Emitter::handle_fd(uint32_t events)
   prime_all();
 }
 
-Emitter::Emitter(const std::string &name,
-                 Scheduler &sched, const YAML::Node &cfg)
+Emitter::Emitter(const std::string &name, Scheduler &sched,
+                 int sock, int family, int protocol)
   : name(name),
     log("udptun.egress.emitter", std::string("emitter:") + name),
-    ipv4(cfg ? cfg["ipv4"].as<bool>("true") : true),
-    ipv6(cfg ? cfg["ipv6"].as<bool>("true") : true),
-    host(cfg ? cfg["host"].as<std::string>("localhost")
-         : std::string("localhost")),
-    srv(cfg ? cfg["port"].as<std::string>() : std::string()),
-    sock(-1), ready(false),
+    sock(sock), family(family), protocol(protocol), ready(false),
     fdev(sched, std::bind(&Emitter::handle_fd, this, std::placeholders::_1))
 {
   fdev.name(std::string("emitter:") + name + ":descriptor");
+  fdev.set(sock, EPOLLOUT);
 }
-
-Emitter::Emitter(const std::string &name, Scheduler &sched)
-  : name(name),
-    log("udptun.egress.emitter", std::string("emitter:") + name),
-    ipv4(true),
-    ipv6(true),
-    host(""),
-    srv("0"),
-    sock(-1), ready(false),
-    fdev(sched, std::bind(&Emitter::handle_fd, this, std::placeholders::_1))
-{
-  fdev.name(std::string("emitter:") + name + ":descriptor");
-}
-
-void Emitter::activate()
-{
-  if (sock >= 0) return;
-  log.debug("activating");
-
-  /* Restrict what we're looking for. */
-  struct addrinfo hints;
-  memset(&hints, 0, sizeof hints);
-  hints.ai_family = ipv4 ? ipv6 ? AF_UNSPEC : AF_INET : AF_INET6;
-  hints.ai_socktype = SOCK_DGRAM;
-  hints.ai_flags = AI_PASSIVE;
-  hints.ai_protocol = 0;
-
-  /* Resolve the host. */
-  struct addrinfo *info = nullptr;
-  LegacyDestructor infoDestr([&info]() { if (info) freeaddrinfo(info); });
-  int rc = getaddrinfo(host.c_str(),
-                       srv.empty() ? nullptr : srv.c_str(),
-                       &hints, &info);
-  int ec = errno;
-  switch (rc) {
-  case 0:
-    break;
-
-  case EAI_SYSTEM:
-    throw std::system_error(ec, std::system_category(),
-                            sformat("getaddrinfo(%s:%s)",
-                                    host.c_str(), srv.c_str()));
-
-  default:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) unk %d",
-                                     host.c_str(), srv.c_str(), rc));
-
-  case EAI_ADDRFAMILY:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) AF %s unavailable",
-                                     host.c_str(), srv.c_str(),
-                                     af_to_str(hints.ai_family).c_str()));
-
-  case EAI_AGAIN:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) temp failure",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_BADFLAGS:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) bad flags",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_FAIL:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) failure",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_FAMILY:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no AF %s",
-                                     host.c_str(), srv.c_str(),
-                                     af_to_str(hints.ai_family).c_str()));
-
-  case EAI_MEMORY:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) out of memory",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_NODATA:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no addrs for host",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_NONAME:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) unk name/service",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_SERVICE:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no serv for host/sock",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_SOCKTYPE:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no sock %s",
-                                     host.c_str(), srv.c_str(),
-                                     socktype_to_str(hints.ai_socktype)
-                                     .c_str()));
-  }
-
-  /* Try to make a socket out of each offered entry, until one works.
-     Store up the errors of the others, but only throw an exception if
-     all fail. */
-  std::map<struct addrinfo *, std::pair<const char *, int>> bad;
-  for (auto iter = info; iter; iter = iter->ai_next) {
-    int sock = socket(iter->ai_family, SOCK_DGRAM, iter->ai_protocol);
-    if (sock < 0) {
-      bad.try_emplace(iter, "socket", errno);
-      continue;
-    }
-
-    if (bind(sock, iter->ai_addr, iter->ai_addrlen) != 0) {
-      bad.try_emplace(iter, "bind", errno);
-      continue;
-    }
-
-    this->sock = sock;
-    this->family = iter->ai_family;
-    this->protocol = iter->ai_protocol;
-    fdev.set(sock, EPOLLOUT);
-    return;
-  }
-
-  /* We failed to create a socket, so gather the error messages
-     together. */
-  std::stringstream msg;
-  msg << "bad emitter";
-  for (auto ent : bad) {
-    auto sai = ent.first;
-    auto &prb = ent.second;
-    msg << " [" << af_to_str(sai->ai_family) << ", "
-        << proto_to_str(sai->ai_protocol) << ", "
-        << to_str(sai->ai_addr, sai->ai_addrlen) << ", "
-        << prb.first;
-#ifdef WITH_STRERROR_NP
-    msg << ":" << strerrorname_np(prb.second);
-#endif
-    msg << " (" << ::strerror(prb.second) << ")]";
-  }
-  throw std::runtime_error(msg.str());
-}
-
-bool Emitter::check(Destination &dst) { return dst.check(family, protocol); }
 
 int Emitter::send(const unsigned char *buf, size_t len,
                   Destination &dst, int flags)
@@ -239,18 +184,18 @@ int Emitter::send(const unsigned char *buf, size_t len,
   assert(sock >= 0);
   auto rc = dst.send(family, protocol, sock, buf, len, flags);
 
-  if (rc < 0) {
-    /* If we'd block (not that it's likely), ask the scheduler to tell
-       us when we wouldn't, and record that there's no point in trying
-       again until we can.  Also standardize the returned error
-       code. */
-    if (errno == EWOULDBLOCK || errno == EAGAIN) {
-      fdev.set(sock, EPOLLOUT);
-      ready = false;
-      return EWOULDBLOCK;
-    }
-    return errno;
+  /* If we'd block (not that it's likely), ask the scheduler to tell
+     us when we wouldn't, and record that there's no point in trying
+     again until we can.  Also standardize the returned error
+     code. */
+  if (rc == EWOULDBLOCK || rc == EAGAIN) {
+    fdev.set(sock, EPOLLOUT);
+    ready = false;
+    return EWOULDBLOCK;
   }
+
+  /* Pass other errors through. */
+  if (rc != 0) return rc;
 
   return 0;
 }

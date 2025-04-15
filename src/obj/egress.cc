@@ -35,39 +35,46 @@
  */
 
 #include "egress.hh"
+#include "messages.hh"
 #include "tcp_egress.hh"
 #include "formatting.hh"
 
 void Egress::activate() { }
 
 Egress *make_egress(Scheduler &sched,
+                    Quota &quota,
+                    const std::filesystem::path &qdir,
                     const std::string &egress_name,
                     PeerTable *peers_backup,
-                    const std::map<std::string, std::shared_ptr<Exit>> &refs,
+                    DestinationBank &dests,
                     const YAML::Node &cfg)
 {
   Egress *result = nullptr;
-  if (cfg["tcp"]) {
-    result = new TCPEgress(egress_name, sched, peers_backup, cfg["tcp"]);
-  }
-  if (result) {
-    if (cfg["channels"]) {
-      auto end = cfg["channels"].end();
-      for (auto iter = cfg["channels"].begin(); iter != end; iter++) {
-        auto label = iter->first.as<unsigned>();
-        auto cend = iter->second.end();
-        for (auto citer = iter->second.begin(); citer != cend; citer++) {
-          auto name = citer->as<std::string>();
-          auto pos = refs.find(name);
-          if (pos == refs.end()) {
-            delete result;
-            throw std::runtime_error(sformat("unknown exit %s for egress %s",
-                                             name.c_str(), egress_name.c_str()));
-          }
-          result->channel(label, pos->second);
-        }
-      }
+  channelmap_t channels;
+
+  /* Extract names for the labels. */
+  const auto &label_root = cfg["labels"];
+  if (label_root) {
+    for (auto iter = label_root.begin(); iter != label_root.end(); iter++) {
+      auto label = iter->second.as<label_t>();
+      channels[label].name = iter->first.as<std::string>();
     }
+  }
+
+  /* */
+  const auto &chroot = cfg["channels"];
+  if (chroot) {
+    for (auto iter = label_root.begin(); iter != label_root.end(); iter++) {
+      auto qname = iter->first.as<std::string>();
+      auto label = iter->second.as<label_t>();
+      channels[label].dests.insert(qname);
+    }
+  }
+
+  if (cfg["tcp"]) {
+    result = new TCPEgress(egress_name, sched, quota,
+                           qdir / egress_name, peers_backup,
+                           dests, channels, cfg["tcp"]);
   }
   return result;
 }

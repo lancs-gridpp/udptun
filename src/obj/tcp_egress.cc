@@ -43,12 +43,17 @@
 #include <cassert>
 #include <cstring>
 
+#include <sstream>
+
 #include "tcp_egress.hh"
 #include "destruction.hh"
+#include "emitters.hh"
 #include "exits.hh"
+#include "destinations.hh"
 #include "network.hh"
 #include "marshaling.hh"
 #include "addrent.hh"
+#include "destbank.hh"
 
 void TCPEgress::Listener::handle_fd(uint32_t)
 {
@@ -97,7 +102,18 @@ void TCPEgress::Listener::handle_fd(uint32_t)
     default:
       /* A connection was established.  Make sure we use it. */
       assert(clsock >= 0);
-      parent.conns.emplace_back(parent, clsock);
+      std::string peer;
+      if (parent.peers.seek(peer, &addr, addrlen)) {
+        auto pos = parent.exits.find(peer);
+        if (pos == parent.exits.end()) {
+          ::close(clsock);
+        } else {
+          exitmap_t &exits = pos->second;
+          parent.conns.emplace_back(parent, clsock, exits);
+        }
+      } else {
+        ::close(clsock);
+      }
       break;
     }
 
@@ -125,15 +141,16 @@ TCPEgress::Listener::~Listener()
     close(sock);
 }
 
-TCPEgress::Connection::Connection(TCPEgress &parent, int sock)
-  : parent(parent), sock(sock), len(0),
+TCPEgress::Connection::Connection(TCPEgress &parent, int sock,
+                                  exitmap_t &exits)
+  : parent(parent), sock(sock), exits(exits), len(0),
     fdev(parent.sched,
          std::bind(&Connection::handle_fd, this, std::placeholders::_1))
 {
   /* Get ready to receive immediately. */
   assert(sock >= 0);
-  fdev.set(sock, EPOLLIN);
   fdev.name(sformat("egress:%s:connection:%d", parent.name.c_str(), sock));
+  fdev.set(sock, EPOLLIN);
 }
 
 TCPEgress::Connection::~Connection()
@@ -147,28 +164,17 @@ TCPEgress::Connection::~Connection()
 bool TCPEgress::Connection::process()
 {
   /* Do we have a full packet? */
-  labelset_t labels;
+  label_t label;
   payloadlen_t pktlen;
-  const unsigned char *base = decode_message(labels, pktlen, buf, len);
+  const unsigned char *base = decode_message(label, pktlen, buf, len);
   if (!base) return false; // Packet is incomplete.
 
-  /* Get the union of all exits indicated by labels. */
-  std::set<Exit *> chosen_exits;
-  for (unsigned lbl = 0; lbl < MAX_LABELS; lbl++) {
-    /* Is the label present in the set? */
-    if (!labels.test(lbl))
-      continue;
-    /* Is an exit defined for this label? */
-    auto pos = parent.exits.find(lbl);
-    if (pos == parent.exits.end())
-      continue;
-    for (auto ptr : pos->second)
-      chosen_exits.insert(ptr.get());
-  }
-
-  /* Pass the payload on to the union. */
-  for (auto ptr : chosen_exits)
-    ptr->deliver(base, pktlen);
+  /* If this label is defined, deliver to each of the corresponding
+     exits. */
+  auto lpos = exits.find(label);
+  if (lpos != exits.end())
+    for (auto &ex : lpos->second)
+      ex.deliver(base, pktlen);
 
   /* Consume the header and payload. */
   len = (buf + len) - (base + pktlen);
@@ -205,7 +211,12 @@ void TCPEgress::Connection::handle_fd(uint32_t)
 
 TCPEgress::TCPEgress(const std::string &name,
                      Scheduler &sched,
-                     PeerTable *peers_backup, const YAML::Node &cfg)
+                     Quota &quota,
+                     std::filesystem::path qdir,
+                     PeerTable *peers_backup,
+                     DestinationBank &dests,
+                     const channelmap_t &channels,
+                     const YAML::Node &cfg)
   : name(name),
     log("udptun.egress.tunnel.tcp", std::string("egress:") + name),
     sched(sched),
@@ -214,9 +225,22 @@ TCPEgress::TCPEgress(const std::string &name,
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>()),
-    peers(peers_backup)
+    quota(quota), qdir(qdir), peers(peers_backup), channels(channels)
 {
-  peers.load(cfg["peers"]);
+  for (const std::string &peer : peers.names()) {
+    unsigned salt = std::hash<std::string>{}(peer);
+
+    for (auto &ent : channels)
+      for (auto dname : ent.second.dests) {
+        /* Map the destination name to a shared pointer to the
+           object. */
+        auto ptr = dests.seek(dname, salt);
+        /* Populate a reverse mapping back to destination name, so we
+           can meaningfully name the emitter that references this
+           destination. */
+        requirement[peer][ptr] = dname;
+      }
+  }
 }
 
 void TCPEgress::flush()
@@ -225,16 +249,73 @@ void TCPEgress::flush()
   conns.remove_if([](Connection &c) { return c.sock < 0; });
 }
 
-void TCPEgress::channel(unsigned label, std::shared_ptr<Exit> dst)
-{
-  exits[label].insert(dst);
-}
-
 void TCPEgress::activate()
 {
   log.debug("activating");
 
-  /* Restrict what we're looking for. */
+  /* Using the template in this->channels, create a graph of exits,
+     emitters and destinations for each peer.  The destinations
+     already exist, and can be looked up through this->dests.  A
+     sufficient number of emitters is created to account for all
+     destinations, and an exit is created for each destination. */
+  for (auto &peer_req : requirement) {
+    const std::string &peer = peer_req.first;
+    auto &dest_names = peer_req.second;
+
+    /* Get a set of all destinations our channels contact, and
+       activate them. */
+    std::set<std::shared_ptr<Destination>> required;
+    std::map<std::string, std::shared_ptr<Destination>> rmap;
+    for (const auto &req : dest_names) {
+      required.insert(req.first);
+      rmap[req.second] = req.first;
+      req.first->activate();
+    }
+
+    /* Create a minimal set of emitters to talk to each destination. */
+    std::map<std::shared_ptr<Destination>, std::shared_ptr<Emitter>> desems;
+    while (!required.empty()) {
+      /* Prepare to create one emitter accounting for as many
+         destinations as possible. */
+      EmitterMaker mkr(required);
+      if (mkr.matched().empty())
+        throw std::runtime_error("could not make emitters for all destinations");
+
+      /* Choose a name for the emitter.  Combine this egress's name,
+         the name of the peer, and all the destinations' names. */
+      std::stringstream exname;
+      exname << name << ':' << peer;
+      for (auto ptr : mkr.matched())
+        exname << ':' << dest_names[ptr];
+
+      /* Create the emitter, and map the compatible destinations to it. */
+      mkr.make(exname.str(), sched, desems);
+    }
+
+    /* Create an exit for each destination, using the emitter created
+       (non-exclusively) for it. */
+    for (auto &ent : channels) {
+      auto label = ent.first;
+      const auto &labelname = ent.second.name;
+      for (auto dname : ent.second.dests) {
+        auto dst = rmap[dname];
+
+        /* Which emitter is to be used with this destination? */
+        auto em = desems[dst];
+
+        /* Create an exit for this emitter and destination, and index
+           under the label. */
+        exits[peer][label].emplace_back(name + ':' + peer + ':' +
+                                        labelname + ':' + dname,
+                                        sched, quota,
+                                        qdir / peer / labelname / dname,
+                                        em, dst);
+      }
+    }
+  }
+  requirement.clear();
+
+  /* For our own sockets, restrict what we're looking for. */
   struct addrinfo hints;
   memset(&hints, 0, sizeof hints);
   hints.ai_family = ipv4 ? ipv6 ? AF_UNSPEC : AF_INET : AF_INET6;
@@ -244,68 +325,8 @@ void TCPEgress::activate()
 
   /* Resolve the host. */
   struct addrinfo *info = nullptr;
-  LegacyDestructor infoDestr([&info]() { if (info) freeaddrinfo(info); });
-  int rc = getaddrinfo(host.c_str(),
-                       srv.empty() ? nullptr : srv.c_str(),
-                       &hints, &info);
-  int ec = errno;
-  switch (rc) {
-  case 0:
-    break;
-
-  case EAI_SYSTEM:
-    throw std::system_error(ec, std::system_category(),
-                            sformat("getaddrinfo(%s:%s)",
-                                    host.c_str(), srv.c_str()));
-
-  default:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) unk %d",
-                                     host.c_str(), srv.c_str(), rc));
-
-  case EAI_ADDRFAMILY:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) AF %s unavailable",
-                                     host.c_str(), srv.c_str(),
-                                     af_to_str(hints.ai_family).c_str()));
-
-  case EAI_AGAIN:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) temp failure",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_BADFLAGS:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) bad flags",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_FAIL:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) failure",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_FAMILY:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no AF %s",
-                                     host.c_str(), srv.c_str(),
-                                     af_to_str(hints.ai_family).c_str()));
-
-  case EAI_MEMORY:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) out of memory",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_NODATA:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no addrs for host",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_NONAME:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) unk name/service",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_SERVICE:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no serv for host/sock",
-                                     host.c_str(), srv.c_str()));
-
-  case EAI_SOCKTYPE:
-    throw std::runtime_error(sformat("getaddrinfo(%s:%s) no sock %s",
-                                     host.c_str(), srv.c_str(),
-                                     socktype_to_str(hints.ai_socktype)
-                                     .c_str()));
-  }
+  get_address_info(info, host.c_str(), srv.empty() ? nullptr : srv.c_str(),
+                   &hints, sformat("egress:%s", name.c_str()).c_str());
 
   std::set<AddressEntry> addrs;
   for (auto iter = info; iter; iter = iter->ai_next) {
@@ -354,8 +375,4 @@ void TCPEgress::activate()
     assert(sock >= 0);
     listeners.emplace_back(*this, sock);
   }
-
-  for (auto &ent : exits)
-    for (auto &ptr : ent.second)
-      ptr->activate();
 }

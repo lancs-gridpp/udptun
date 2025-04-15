@@ -39,26 +39,41 @@
 
 #include <string>
 #include <map>
+#include <set>
 #include <memory>
+#include <filesystem>
+#include <functional>
 
 #include <yaml-cpp/yaml.h>
 
 #include "logger.hh"
+#include "messages.hh"
 
 class Exit;
 class Scheduler;
 class PeerTable;
+class Destination;
+class Quota;
+class DestinationBank;
 
 struct Egress {
   virtual void activate();
-  virtual void channel(unsigned, std::shared_ptr<Exit> dst) = 0;
   virtual ~Egress() = default;
 };
 
+struct ChannelConfiguration {
+  std::string name;
+  std::set<std::string> dests;
+};
+
+typedef std::map<label_t, ChannelConfiguration> channelmap_t;
+
 Egress *make_egress(Scheduler &,
+                    Quota &,
+                    const std::filesystem::path &qdir,
                     const std::string &egress_name,
                     PeerTable *peers_backup,
-                    const std::map<std::string, std::shared_ptr<Exit>> &refs,
+                    DestinationBank &dests,
                     const YAML::Node &);
 
 #endif

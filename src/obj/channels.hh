@@ -56,7 +56,7 @@ class Channel : Streamer {
   const std::string name;
   Logger log;
   std::shared_ptr<Ingress> ingress;
-  const labelset_t labels;
+  label_t label;
   IdleEvent queue_event;
   PayloadQueue queue;
   Payload *current;
@@ -71,7 +71,7 @@ class Channel : Streamer {
 
 public:
   Channel(const std::string &name,
-          Scheduler &, std::shared_ptr<Ingress>, labelset_t,
+          Scheduler &, std::shared_ptr<Ingress>, label_t,
           Quota &, const std::filesystem::path &);
   ~Channel();
   void activate();

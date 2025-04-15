@@ -43,6 +43,7 @@
 #include <set>
 #include <map>
 #include <memory>
+#include <filesystem>
 
 #include "logger.hh"
 #include "egress.hh"
@@ -51,7 +52,12 @@
 #include "messages.hh"
 #include "peers.hh"
 
+class Quota;
+class DestinationBank;
+
 class TCPEgress : public Egress {
+  typedef std::map<label_t, std::list<Exit>> exitmap_t;
+
   class Listener {
     friend TCPEgress;
     TCPEgress &parent;
@@ -70,6 +76,7 @@ class TCPEgress : public Egress {
     friend TCPEgress;
     TCPEgress &parent;
     int sock;
+    exitmap_t &exits;
     void handle_fd(uint32_t);
     unsigned char buf[MAX_LABEL_BYTES + MAX_LENGTH_BYTES + MAX_LENGTH];
     std::size_t len;
@@ -78,7 +85,7 @@ class TCPEgress : public Egress {
     bool process();
 
   public:
-    Connection(TCPEgress &, int sock);
+    Connection(TCPEgress &, int sock, exitmap_t &);
     ~Connection();
   };
   friend class Connection;
@@ -90,16 +97,29 @@ class TCPEgress : public Egress {
   IdleEvent idev;
   const bool ipv4, ipv6;
   const std::string host, srv;
+  Quota &quota;
+  std::filesystem::path qdir;
   PeerTable peers;
-  std::map<unsigned, std::set<std::shared_ptr<Exit>>> exits;
+  channelmap_t channels;
+
+  std::map<std::string,
+           std::map<std::shared_ptr<Destination>, std::string>> requirement;
+
+  /* Map from peer names to labels to exits. */
+  std::map<std::string, exitmap_t> exits;
 
   void flush();
 
 public:
-  TCPEgress(const std::string &name, Scheduler &sched,
-            PeerTable *peers_backup, const YAML::Node &cfg);
+  TCPEgress(const std::string &name,
+            Scheduler &sched,
+            Quota &quota,
+            std::filesystem::path qdir,
+            PeerTable *peers_backup,
+            DestinationBank &dests,
+            const channelmap_t &channels,
+            const YAML::Node &cfg);
   void activate();
-  void channel(unsigned, std::shared_ptr<Exit> dst);
 };
 
 #endif

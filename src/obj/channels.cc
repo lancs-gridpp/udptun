@@ -48,11 +48,11 @@
 
 Channel::Channel(const std::string &name,
                  Scheduler &sched,
-                 std::shared_ptr<Ingress> ingress, labelset_t labels,
+                 std::shared_ptr<Ingress> ingress, label_t label,
                  Quota &quota,
                  const std::filesystem::path &dir)
   : name(name), log("udptun.ingress.channel", std::string("ingress:") + name),
-    ingress(ingress), labels(labels),
+    ingress(ingress), label(label),
     queue_event(sched, std::bind(&Channel::queue_ready, this)),
     queue(std::string("ingress:") + name,
           100 * 1024, quota, dir, std::bind(&IdleEvent::set, queue_event)),
@@ -78,11 +78,13 @@ bool Channel::describe(std::vector<struct iovec> &iov)
     if (!current) return false;
     done = 0;
   }
-  labels_to_bytes(labels, channels, done, 0, iov);
-  // TODO: Assert size within two bytes.
+  label_to_bytes(label, channels, done, 0, iov);
+  // Assert size within two bytes.
+  assert(current->size() <= 0xffffu);
   length_to_bytes(current->size(), lenword, done, MAX_LABEL_BYTES, iov);
   auto m = done > MAX_LABEL_BYTES + MAX_LENGTH_BYTES
-    ? MAX_LABEL_BYTES + MAX_LENGTH_BYTES + current->size() - done : current->size();
+    ? MAX_LABEL_BYTES + MAX_LENGTH_BYTES + current->size() - done
+    : current->size();
   assert(m > 0);
   push_onto(iov, (current->base() + (current->size() - m)), m);
   return true;

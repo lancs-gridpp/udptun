@@ -39,19 +39,11 @@
 
 #include <cstdint>
 
-#include <limits>
-#include <vector>
-#include <bitset>
-
-constexpr unsigned MAX_LABEL_BYTES = 16;
-constexpr unsigned MAX_LABELS = MAX_LABEL_BYTES * 8;
-typedef std::bitset<MAX_LABELS> labelset_t;
+typedef uint_fast16_t label_t;
+constexpr unsigned MAX_LABEL_BYTES = 2;
 
 typedef uint_fast16_t payloadlen_t;
 constexpr unsigned MAX_LENGTH_BYTES = 2;
 constexpr unsigned MAX_LENGTH = 65536;
-
-typedef uint_fast16_t clientid_t;
-constexpr unsigned MAX_CLIENTID_BYTES = 2;
 
 #endif

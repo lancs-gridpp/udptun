@@ -46,6 +46,7 @@
 #include "formatting.hh"
 #include "destinations.hh"
 
+#if 0
 void make_exits(const std::string &exname, Scheduler &sched, Quota &quota,
                 const std::filesystem::path &dir, const YAML::Node &cfg,
                 destination_index_t dests,
@@ -64,6 +65,7 @@ void make_exits(const std::string &exname, Scheduler &sched, Quota &quota,
       std::make_shared<Exit>(name, sched, quota, dir / name, emitter, dest);
   }
 }
+#endif
 
 Exit::Exit(const std::string &name,
            Scheduler &sched,
@@ -85,8 +87,6 @@ Exit::Exit(const std::string &name,
 void Exit::activate()
 {
   log.debug("activating");
-  destination->activate();
-  emitter->activate();
   queue.poke();
 }
 

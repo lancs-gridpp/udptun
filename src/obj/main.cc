@@ -71,6 +71,7 @@
 #include "fnexp.hh"
 #include "logging.hh"
 #include "peers.hh"
+#include "destbank.hh"
 
 template <class T>
 static void populate(std::map<std::string, std::shared_ptr<T>> &dst,
@@ -196,7 +197,6 @@ static int trapped_main(Logger &log, Config &config)
     YAML::Node root = config.get();
 
     Logging::configure(root["logging"]);
-    PeerTable peers;
 
     std::filesystem::path queuedir("/var/spool/udptun");
     if (root["queues"]) {
@@ -242,6 +242,7 @@ static int trapped_main(Logger &log, Config &config)
 
     log.info("starting");
 
+    PeerTable peers;
     std::filesystem::path egress_qdir = queuedir / "egress";
     std::filesystem::path ingress_qdir = queuedir / "ingress";
     std::filesystem::create_directory(egress_qdir);
@@ -285,17 +286,9 @@ static int trapped_main(Logger &log, Config &config)
                                 (sformat("ingress channel %s has no tunnel %s",
                                          inst.c_str(), tun.c_str()));
 
-                            /* Get the label set by OR-ing the label
-                               numbers. */
-                            labelset_t labels = 0;
-                            for (auto iter = cfg["labels"].begin();
-                                 iter != cfg["labels"].end(); iter++) {
-                              auto lbl = iter->as<unsigned>();
-                              labels |= 1u << lbl;
-                            }
-
+                            label_t label = cfg["label"].as<label_t>();
                             return new Channel(inst, sched, pos->second,
-                                               labels, quota,
+                                               label, quota,
                                                ingress_qdir / inst);
                           });
         auto find_channel =
@@ -321,7 +314,10 @@ static int trapped_main(Logger &log, Config &config)
       if (root["egress"]) {
         const auto &egress_root = root["egress"];
         peers.load(egress_root["peers"]);
+        DestinationBank dbank(egress_root["destinations"],
+                              egress_root["groups"]);
 
+#if 0
         /* Create an index of named destinations.  Exits will refer to
            these by name.  Any not used after the block exits will be
            quietly destroyed. */
@@ -354,16 +350,18 @@ static int trapped_main(Logger &log, Config &config)
                        egress_qdir, iter->second, find_dest, exit_index);
           }
         }
+#endif
 
         /* Create the configured egresses, using the available exits.
            Sockets are not created at this stage; only dependencies
            are established, so that missing dependencies will fail the
            configuration phase. */
         populate<Egress>(egress_index, "tunnels", egress_root,
-                         [&sched, &peers, &exit_index]
+                         [&sched, &peers, &egress_qdir, &quota, &dbank]
                          (const std::string &inst,
                           const YAML::Node &cfg) {
-                           return make_egress(sched, inst, &peers, exit_index, cfg);
+                           return make_egress(sched, quota, egress_qdir,
+                                              inst, &peers, dbank, cfg);
                          });
       }
     }
