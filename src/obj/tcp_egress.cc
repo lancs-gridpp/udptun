@@ -309,20 +309,24 @@ void TCPEgress::activate()
        (non-exclusively) for it. */
     for (auto &ent : channels) {
       auto label = ent.first;
-      const auto &labelname = ent.second.name;
+      //const auto &labelname = ent.second.name;
       for (auto dname : ent.second.dests) {
         auto dst = rmap[dname];
 
         /* Which emitter is to be used with this destination? */
         auto em = desems[dst];
 
+        auto eqdir = qdir;
+        std::filesystem::create_directory(eqdir);
+        eqdir /= peer;
+        std::filesystem::create_directory(eqdir);
+        eqdir /= dname;
+
         /* Create an exit for this emitter and destination, and index
            under the label. */
-        exits[peer][label].emplace_back(name + ':' + peer + ':' +
-                                        labelname + ':' + dname,
+        exits[peer][label].emplace_back(name + ':' + peer + ':' + dname,
                                         sched, quota,
-                                        qdir / peer / labelname / dname,
-                                        em, dst);
+                                        eqdir, em, dst);
       }
     }
   }
