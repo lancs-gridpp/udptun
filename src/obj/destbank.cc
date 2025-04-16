@@ -40,8 +40,8 @@
 #include "destbank.hh"
 #include "formatting.hh"
 
-DestinationBank::DestinationBank(const YAML::Node &singletons,
-                                 const YAML::Node &groups)
+void DestinationBank::load(const YAML::Node &singletons,
+                           const YAML::Node &groups)
 {
   std::map<std::string, std::shared_ptr<Destination>> singtab;
   if (singletons) {

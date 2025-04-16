@@ -50,7 +50,8 @@ class DestinationBank {
   std::map<std::string, std::vector<std::shared_ptr<Destination>>> tab;
 
 public:
-  DestinationBank(const YAML::Node &singletons, const YAML::Node &groups);
+  void clear() { tab.clear(); }
+  void load(const YAML::Node &singletons, const YAML::Node &groups);
 
   std::shared_ptr<Destination> seek(const std::string &name, unsigned salt);
 };

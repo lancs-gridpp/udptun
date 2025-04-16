@@ -70,7 +70,6 @@
 #include "formatting.hh"
 #include "fnexp.hh"
 #include "logging.hh"
-#include "peers.hh"
 #include "destbank.hh"
 #include "clientid.hh"
 
@@ -243,7 +242,7 @@ static int trapped_main(Logger &log, Config &config)
 
     log.info("starting");
 
-    PeerTable peers;
+    DestinationBank dbank;
     ClientTable clients(sched, std::chrono::hours(1), queuedir / "clients.db");
     std::filesystem::path egress_qdir = queuedir / "egress";
     std::filesystem::path ingress_qdir = queuedir / "ingress";
@@ -315,20 +314,18 @@ static int trapped_main(Logger &log, Config &config)
 
       if (root["egress"]) {
         const auto &egress_root = root["egress"];
-        peers.load(egress_root["peers"]);
-        DestinationBank dbank(egress_root["destinations"],
-                              egress_root["groups"]);
+        dbank.load(egress_root["destinations"],
+                   egress_root["groups"]);
 
         /* Create the configured egresses, using the available exits.
            Sockets are not created at this stage; only dependencies
            are established, so that missing dependencies will fail the
            configuration phase. */
         populate<Egress>(egress_index, "tunnels", egress_root,
-                         [&sched, &peers, &egress_qdir, &quota, &dbank]
+                         [&sched, &dbank]
                          (const std::string &inst,
                           const YAML::Node &cfg) {
-                           return make_egress(sched, quota, egress_qdir,
-                                              inst, &peers, dbank, cfg);
+                           return make_egress(sched, inst, dbank, cfg);
                          });
       }
     }

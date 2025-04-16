@@ -42,38 +42,25 @@
 void Egress::activate() { }
 
 Egress *make_egress(Scheduler &sched,
-                    Quota &quota,
-                    const std::filesystem::path &qdir,
                     const std::string &egress_name,
-                    PeerTable *peers_backup,
                     DestinationBank &dests,
                     const YAML::Node &cfg)
 {
   Egress *result = nullptr;
   channelmap_t channels;
 
-  /* Extract names for the labels. */
-  const auto &label_root = cfg["labels"];
-  if (label_root) {
-    for (auto iter = label_root.begin(); iter != label_root.end(); iter++) {
-      auto label = iter->second.as<label_t>();
-      channels[label].name = iter->first.as<std::string>();
-    }
-  }
-
-  /* List the channels that each label should go to. */
+  /* List the destinations that each label should go to. */
   const auto &chroot = cfg["channels"];
   if (chroot) {
     for (auto iter = chroot.begin(); iter != chroot.end(); iter++) {
-      auto qname = iter->first.as<std::string>();
-      auto label = iter->second.as<label_t>();
-      channels[label].dests.insert(qname);
+      auto label = iter->first.as<label_t>();
+      for (auto niter = iter->second.begin(); niter != iter->second.end(); niter++)
+        channels[label].insert(niter->as<std::string>());
     }
   }
 
   if (cfg["tcp"]) {
-    result = new TCPEgress(egress_name, sched, quota,
-                           qdir / egress_name, peers_backup,
+    result = new TCPEgress(egress_name, sched,
                            dests, channels, cfg["tcp"]);
   }
   return result;

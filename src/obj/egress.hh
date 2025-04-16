@@ -51,9 +51,7 @@
 
 class Exit;
 class Scheduler;
-class PeerTable;
 class Destination;
-class Quota;
 class DestinationBank;
 
 struct Egress {
@@ -61,18 +59,10 @@ struct Egress {
   virtual ~Egress() = default;
 };
 
-struct ChannelConfiguration {
-  std::string name;
-  std::set<std::string> dests;
-};
-
-typedef std::map<label_t, ChannelConfiguration> channelmap_t;
+typedef std::map<label_t, std::set<std::string>> channelmap_t;
 
 Egress *make_egress(Scheduler &,
-                    Quota &,
-                    const std::filesystem::path &qdir,
                     const std::string &egress_name,
-                    PeerTable *peers_backup,
                     DestinationBank &dests,
                     const YAML::Node &);
 

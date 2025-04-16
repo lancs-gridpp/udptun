@@ -44,17 +44,18 @@
 #include <map>
 #include <memory>
 #include <filesystem>
+#include <chrono>
 
 #include "logger.hh"
 #include "egress.hh"
 #include "descriptor.hh"
 #include "idle.hh"
 #include "messages.hh"
-#include "peers.hh"
 #include "sockaddrs.hh"
 
-class Quota;
 class DestinationBank;
+class Destination;
+class Emitter;
 
 class TCPEgress : public Egress {
   typedef std::map<label_t, std::list<Exit>> exitmap_t;
@@ -77,18 +78,33 @@ class TCPEgress : public Egress {
     friend TCPEgress;
     TCPEgress &parent;
     int sock;
-    exitmap_t &exits;
     void handle_fd(uint32_t);
-    unsigned char buf[MAX_LABEL_BYTES + MAX_LENGTH_BYTES + MAX_LENGTH];
+    unsigned char buf[MAX_CLID_BYTES + MAX_LABEL_BYTES +
+                      MAX_LENGTH_BYTES + MAX_LENGTH];
     std::size_t len;
     DescriptorEvent fdev;
     SocketAddress peeraddr;
+
+    class ClientState {
+      std::chrono::system_clock::time_point last_used;
+      std::map<label_t, std::map<std::shared_ptr<Destination>,
+                                 std::shared_ptr<Emitter>>> outlets;
+
+    public:
+      ClientState(unsigned salt, channelmap_t &, DestinationBank &, Scheduler &);
+      void deliver(label_t, const unsigned char *, std::size_t);
+      bool expired(std::chrono::system_clock::time_point epoch) {
+        return last_used < epoch;
+      }
+    };
+
+    std::map<clid_t, ClientState> clstats;
 
     bool process();
 
   public:
     Connection(TCPEgress &, int sock,
-               const struct sockaddr *, socklen_t, exitmap_t &);
+               const struct sockaddr *, socklen_t);
     ~Connection();
   };
   friend class Connection;
@@ -100,25 +116,14 @@ class TCPEgress : public Egress {
   IdleEvent idev;
   const bool ipv4, ipv6;
   const std::string host, srv;
-  Quota &quota;
-  std::filesystem::path qdir;
-  PeerTable peers;
   channelmap_t channels;
-
-  std::map<std::string,
-           std::map<std::shared_ptr<Destination>, std::string>> requirement;
-
-  /* Map from peer names to labels to exits. */
-  std::map<std::string, exitmap_t> exits;
+  DestinationBank &dbank;
 
   void flush();
 
 public:
   TCPEgress(const std::string &name,
             Scheduler &sched,
-            Quota &quota,
-            std::filesystem::path qdir,
-            PeerTable *peers_backup,
             DestinationBank &dests,
             const channelmap_t &channels,
             const YAML::Node &cfg);

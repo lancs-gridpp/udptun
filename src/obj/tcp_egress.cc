@@ -107,29 +107,10 @@ void TCPEgress::Listener::handle_fd(uint32_t)
     default:
       /* A connection was established.  Make sure we use it. */
       assert(clsock >= 0);
-      std::string peer;
-      if (parent.peers.seek(peer, &space.addr, addrlen)) {
-        auto pos = parent.exits.find(peer);
-        if (pos == parent.exits.end()) {
-          log.warn([this, &space, addrlen, &peer](std::ostream &out) {
-            out << sock << ": could not find entry for peer " << peer
-                << " (" << to_str(&space.addr, addrlen) << ")";
-          });
-          ::close(clsock);
-        } else {
-          log.info([this, &space, addrlen, &peer](std::ostream &out) {
-            out << sock << ": peer connected: " << to_str(&space.addr, addrlen)
-                << " is " << peer;
-          });
-          exitmap_t &exits = pos->second;
-          parent.conns.emplace_back(parent, clsock, &space.addr, addrlen, exits);
-        }
-      } else {
-        log.warn([this, &space, addrlen](std::ostream &out) {
-          out << sock << ": unknown peer " << to_str(&space.addr, addrlen);
-        });
-        ::close(clsock);
-      }
+      parent.conns.emplace_back(parent, clsock, &space.addr, addrlen);
+      log.info([this, &space, addrlen](std::ostream &out) {
+          out << sock << ": new peer " << to_str(&space.addr, addrlen);
+      });
       break;
     }
 
@@ -158,9 +139,8 @@ TCPEgress::Listener::~Listener()
 }
 
 TCPEgress::Connection::Connection(TCPEgress &parent, int sock,
-                                  const struct sockaddr *addr, socklen_t addrlen,
-                                  exitmap_t &exits)
-  : parent(parent), sock(sock), exits(exits), len(0),
+                                  const struct sockaddr *addr, socklen_t addrlen)
+  : parent(parent), sock(sock), len(0),
     fdev(parent.sched,
          std::bind(&Connection::handle_fd, this, std::placeholders::_1)),
     peeraddr(addr, addrlen)
@@ -179,21 +159,89 @@ TCPEgress::Connection::~Connection()
     close(sock);
 }
 
+TCPEgress::Connection::ClientState::ClientState(unsigned salt,
+                                                channelmap_t &chmap,
+                                                DestinationBank &dbank,
+                                                Scheduler &sched)
+  : last_used(std::chrono::system_clock::now())
+{
+  /* Get a full set of destinations that we need to talk to, and
+     ensure they are activated.  Also keep a reverse map from
+     destination to name, for diagnostics. */
+  std::set<std::shared_ptr<Destination>> required_dests;
+  std::map<std::shared_ptr<Destination>, std::string> dest_names;
+  std::map<std::string, std::shared_ptr<Destination>> name_dests;
+  for (auto &ent : chmap) {
+    auto &dnames = ent.second;
+    for (auto &dname : dnames) {
+      std::shared_ptr<Destination> dest = dbank.seek(dname, salt);
+      required_dests.insert(dest);
+      dest_names[dest] = dname;
+      name_dests[dname] = dest;
+      dest->activate();
+    }
+  }
+
+  /* Erode the set of required destinations, populating dest_em with
+     an emitter per destination.  Several destinations may use the
+     same emitter. */
+  std::map<std::shared_ptr<Destination>, std::shared_ptr<Emitter>> dest_em;
+  while (!required_dests.empty()) {
+    EmitterMaker mkr(required_dests);
+    if (mkr.matched().empty())
+      // TODO: Provide more context in the message.
+      throw std::runtime_error("could not make emitters for all destinations");
+
+    // TODO: Choose a name for the emitter.
+
+    /* Create the emitter, map the matched destinations to it, and
+       eliminate those destinations from the required set. */
+    mkr.make("dummy", sched, dest_em);
+  }
+
+  /* Populate the mapping from label to <destination, emitter> pair. */
+  for (auto &ent : chmap) {
+    label_t label = ent.first;
+    auto &dnames = ent.second;
+    for (auto &dname : dnames) {
+      std::shared_ptr<Destination> dest = name_dests[dname];
+      std::shared_ptr<Emitter> em = dest_em[dest];
+      outlets[label][dest] = em;
+    }
+  }
+}
+
+void TCPEgress::Connection::ClientState::deliver(label_t label,
+                                                 const unsigned char *base,
+                                                 std::size_t len)
+{
+  /* Ignore unknown labels. */
+  auto pos = outlets.find(label);
+  if (pos == outlets.end()) return;
+
+  /* Send the message to each destination, using an appropriate
+     emitter. */
+  for (auto &ent : pos->second)
+    ent.second->send(base, len, *ent.first.get(), 0);
+
+  last_used = std::chrono::system_clock::now();
+}
+
 bool TCPEgress::Connection::process()
 {
   /* Do we have a full packet? */
-  clid_t clid; // not yet used
+  clid_t clid;
   label_t label;
   payloadlen_t pktlen;
   const unsigned char *base = decode_message(clid, label, pktlen, buf, len);
   if (!base) return false; // Packet is incomplete.
 
-  /* If this label is defined, deliver to each of the corresponding
-     exits. */
-  auto lpos = exits.find(label);
-  if (lpos != exits.end())
-    for (auto &ex : lpos->second)
-      ex.deliver(base, pktlen);
+  unsigned salt = 0; // TODO
+  auto [ pos, ins ] = clstats.try_emplace(clid, salt,
+                                          parent.channels, parent.dbank,
+                                          parent.sched);
+  auto &clstat = pos->second;
+  clstat.deliver(label, base, pktlen);
 
   /* Consume the header and payload. */
   len = (buf + len) - (base + pktlen);
@@ -246,10 +294,7 @@ void TCPEgress::Connection::handle_fd(uint32_t)
 
 TCPEgress::TCPEgress(const std::string &name,
                      Scheduler &sched,
-                     Quota &quota,
-                     std::filesystem::path qdir,
-                     PeerTable *peers_backup,
-                     DestinationBank &dests,
+                     DestinationBank &dbank,
                      const channelmap_t &channels,
                      const YAML::Node &cfg)
   : name(name),
@@ -260,36 +305,7 @@ TCPEgress::TCPEgress(const std::string &name,
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>()),
-    quota(quota), qdir(qdir), peers(peers_backup), channels(channels)
-{
-  std::set<std::string> peer_names;
-  peers.get_names(peer_names);
-  for (const std::string &peer : peer_names) {
-    unsigned salt = std::hash<std::string>{}(peer);
-    log.debug([&peer, &salt](std::ostream &out) {
-      out << "peer " << peer << " has salt " << salt;
-    });
-
-    for (auto &ent : channels) {
-      log.debug([&ent](std::ostream &out) {
-        out << "resolving for " << ent.first << " (" << ent.second.name << ")";
-      });
-      for (auto dname : ent.second.dests) {
-        log.debug([&dname](std::ostream &out) {
-          out << "resolving " << dname;
-        });
-        /* Map the destination name to a shared pointer to the
-           object. */
-        auto ptr = dests.seek(dname, salt);
-
-        /* Populate a reverse mapping back to destination name, so we
-           can meaningfully name the emitter that references this
-           destination. */
-        requirement[peer][ptr] = dname;
-      }
-    }
-  }
-}
+    channels(channels), dbank(dbank) { }
 
 void TCPEgress::flush()
 {
@@ -300,72 +316,6 @@ void TCPEgress::flush()
 void TCPEgress::activate()
 {
   log.debug("activating");
-
-  /* Using the template in this->channels, create a graph of exits,
-     emitters and destinations for each peer.  The destinations
-     already exist, and can be looked up through this->dests.  A
-     sufficient number of emitters is created to account for all
-     destinations, and an exit is created for each destination. */
-  for (auto &peer_req : requirement) {
-    const std::string &peer = peer_req.first;
-    auto &dest_names = peer_req.second;
-
-    /* Get a set of all destinations our channels contact, and
-       activate them. */
-    std::set<std::shared_ptr<Destination>> required;
-    std::map<std::string, std::shared_ptr<Destination>> rmap;
-    for (const auto &req : dest_names) {
-      required.insert(req.first);
-      rmap[req.second] = req.first;
-      req.first->activate();
-    }
-
-    /* Create a minimal set of emitters to talk to each destination. */
-    std::map<std::shared_ptr<Destination>, std::shared_ptr<Emitter>> desems;
-    while (!required.empty()) {
-      /* Prepare to create one emitter accounting for as many
-         destinations as possible. */
-      EmitterMaker mkr(required);
-      if (mkr.matched().empty())
-        throw std::runtime_error("could not make emitters for all destinations");
-
-      /* Choose a name for the emitter.  Combine this egress's name,
-         the name of the peer, and all the destinations' names. */
-      std::stringstream exname;
-      exname << name << ':' << peer;
-      for (auto ptr : mkr.matched())
-        exname << ':' << dest_names[ptr];
-
-      /* Create the emitter, and map the compatible destinations to it. */
-      mkr.make(exname.str(), sched, desems);
-    }
-
-    /* Create an exit for each destination, using the emitter created
-       (non-exclusively) for it. */
-    for (auto &ent : channels) {
-      auto label = ent.first;
-      //const auto &labelname = ent.second.name;
-      for (auto dname : ent.second.dests) {
-        auto dst = rmap[dname];
-
-        /* Which emitter is to be used with this destination? */
-        auto em = desems[dst];
-
-        auto eqdir = qdir;
-        std::filesystem::create_directory(eqdir);
-        eqdir /= peer;
-        std::filesystem::create_directory(eqdir);
-        eqdir /= dname;
-
-        /* Create an exit for this emitter and destination, and index
-           under the label. */
-        exits[peer][label].emplace_back(name + ':' + peer + ':' + dname,
-                                        sched, quota,
-                                        eqdir, em, dst);
-      }
-    }
-  }
-  requirement.clear();
 
   /* For our own sockets, restrict what we're looking for. */
   struct addrinfo hints;
