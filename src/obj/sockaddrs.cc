@@ -97,7 +97,7 @@ std::ostream &operator <<(std::ostream &lhs, const SocketAddress &rhs)
 {
   lhs << rhs.len_;
   for (socklen_t i = 0; i < rhs.len_; i++)
-    lhs << " " << rhs.base_[i];
+    lhs << " " << (unsigned) rhs.base_[i];
   return lhs;
 }
 
@@ -111,8 +111,11 @@ std::istream &operator >>(std::istream &lhs, SocketAddress &rhs)
   lhs >> rhs.len_;
   if (rhs.len_ > 0) {
     rhs.base_ = new unsigned char[rhs.len_];
-    for (socklen_t i = 0; i < rhs.len_; i++)
-      lhs >> rhs.base_[i];
+    for (socklen_t i = 0; i < rhs.len_; i++) {
+      unsigned b;
+      lhs >> b;
+      b = rhs.base_[i];
+    }
   }
   return lhs;
 }
