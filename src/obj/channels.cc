@@ -37,6 +37,7 @@
 #include <sys/uio.h>
 
 #include <cassert>
+#include <cstring>
 
 #include "channels.hh"
 #include "quotas.hh"
@@ -85,17 +86,33 @@ bool Channel::describe(std::vector<struct iovec> &iov)
     if (!current) return false;
     done = 0;
   }
-  clid_to_bytes(0, clids, done, 0, iov);
+
+  /* Extract the client id from the start of the queue entry. */
+  union {
+    clid_t clid;
+    unsigned char clidbuf[sizeof(clid_t)];
+  };
+  assert(current->size() >= sizeof clid);
+  ::memcpy(clidbuf, current->base(), sizeof clid);
+
+  /* The transmitted payload is the queue's payload minus the client
+     id stuck in front of it. */
+  std::size_t plsize = current->size() - sizeof clid;
+
+  clid_to_bytes(clid, clids, done, 0, iov);
   label_to_bytes(label, channels, done, MAX_CLID_BYTES, iov);
   // Assert size within two bytes.
-  assert(current->size() <= 0xffffu);
-  length_to_bytes(current->size(), lenword, done,
+  assert(plsize <= 0xffffu);
+  length_to_bytes(plsize, lenword, done,
                   MAX_CLID_BYTES + MAX_LABEL_BYTES, iov);
+
+  /* Work out how many (m) bytes of the payload have already been
+     sent. */
   auto m = done > MAX_CLID_BYTES + MAX_LABEL_BYTES + MAX_LENGTH_BYTES
-    ? MAX_CLID_BYTES + MAX_LABEL_BYTES + MAX_LENGTH_BYTES + current->size() - done
-    : current->size();
+    ? MAX_CLID_BYTES + MAX_LABEL_BYTES + MAX_LENGTH_BYTES + plsize - done
+    : plsize;
   assert(m > 0);
-  push_onto(iov, (current->base() + (current->size() - m)), m);
+  push_onto(iov, (current->base() + (plsize - m)), m);
   return true;
 }
 
@@ -126,5 +143,9 @@ void Channel::queue_ready()
 
 void Channel::submit(clid_t clid, const void *base, std::size_t len)
 {
-  queue.push(base, len);
+  Chunk chs[2] = {
+    { &clid, sizeof clid },
+    { base, len },
+  };
+  queue.push(chs, sizeof chs / sizeof chs[0]);
 }
