@@ -52,11 +52,13 @@ struct Absorber {
 
 class Channel;
 class Scheduler;
+class ClientTable;
 
 typedef
 std::function<std::shared_ptr<Channel>(const std::string &)> channel_index_t;
 
-Absorber *make_absorber(Scheduler &, const std::string &, const YAML::Node &,
+Absorber *make_absorber(Scheduler &, ClientTable &,
+                        const std::string &, const YAML::Node &,
                         channel_index_t);
 
 #endif

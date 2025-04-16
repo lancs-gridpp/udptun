@@ -48,10 +48,12 @@
 #include "logger.hh"
 
 class Channel;
+class ClientTable;
 
 class UDPAbsorber : public Absorber {
   const std::string name;
   Logger log;
+  ClientTable &cltab;
   const bool ipv4, ipv6;
   const std::string host, srv;
   const std::set<std::shared_ptr<Channel>> channels;
@@ -63,7 +65,7 @@ class UDPAbsorber : public Absorber {
 
 public:
   UDPAbsorber(const std::string &name,
-              Scheduler &, const YAML::Node &,
+              Scheduler &, ClientTable &, const YAML::Node &,
               const std::set<std::shared_ptr<Channel>> &);
   ~UDPAbsorber();
 

@@ -72,6 +72,7 @@
 #include "logging.hh"
 #include "peers.hh"
 #include "destbank.hh"
+#include "clientid.hh"
 
 template <class T>
 static void populate(std::map<std::string, std::shared_ptr<T>> &dst,
@@ -243,6 +244,7 @@ static int trapped_main(Logger &log, Config &config)
     log.info("starting");
 
     PeerTable peers;
+    ClientTable clients(sched, std::chrono::hours(1), queuedir / "clients.db");
     std::filesystem::path egress_qdir = queuedir / "egress";
     std::filesystem::path ingress_qdir = queuedir / "ingress";
     std::filesystem::create_directory(egress_qdir);
@@ -303,10 +305,10 @@ static int trapped_main(Logger &log, Config &config)
            datagram socket, and anything it receives will be sent to
            each of its channels, which it retains references to. */
         populate<Absorber>(absorber_index, "sockets", ingress_root,
-                           [&sched, &find_channel]
+                           [&sched, &clients, &find_channel]
                            (const std::string &inst,
                             const YAML::Node &cfg) {
-                             return make_absorber(sched, inst,
+                             return make_absorber(sched, clients, inst,
                                                   cfg, find_channel);
                            });
       }

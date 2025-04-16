@@ -40,7 +40,7 @@
 
 Absorber::~Absorber() { }
 
-Absorber *make_absorber(Scheduler &sched,
+Absorber *make_absorber(Scheduler &sched, ClientTable &cltab,
                         const std::string &inst,
                         const YAML::Node &cfg,
                         channel_index_t channels)
@@ -61,7 +61,7 @@ Absorber *make_absorber(Scheduler &sched,
     return nullptr;
 
   if (cfg["udp"])
-    return new UDPAbsorber(inst, sched, cfg["udp"], channel_set);
+    return new UDPAbsorber(inst, sched, cltab, cfg["udp"], channel_set);
 
   return nullptr;
 }

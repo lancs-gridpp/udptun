@@ -47,10 +47,12 @@
 #include "network.hh"
 
 UDPAbsorber::UDPAbsorber(const std::string &name,
-                         Scheduler &sched, const YAML::Node &cfg,
+                         Scheduler &sched, ClientTable &cltab,
+                         const YAML::Node &cfg,
                          const std::set<std::shared_ptr<Channel>> &channels)
   : name(name),
     log("udptun.ingress.absorber.udp", std::string("absorber:") + name),
+    cltab(cltab),
     ipv4(cfg ? cfg["ipv4"].as<bool>("true") : true),
     ipv6(cfg ? cfg["ipv6"].as<bool>("true") : true),
     host(cfg ? cfg["host"].as<std::string>("localhost")
