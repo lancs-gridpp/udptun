@@ -111,13 +111,15 @@ void TCPEgress::Listener::handle_fd(uint32_t)
       if (parent.peers.seek(peer, &space.addr, addrlen)) {
         auto pos = parent.exits.find(peer);
         if (pos == parent.exits.end()) {
-          log.warn([this, &peer](std::ostream &out) {
-            out << sock << ": could not find entry for peer " << peer;
+          log.warn([this, &space, addrlen, &peer](std::ostream &out) {
+            out << sock << ": could not find entry for peer " << peer
+                << " (" << to_str(&space.addr, addrlen) << ")";
           });
           ::close(clsock);
         } else {
-          log.info([this, &peer](std::ostream &out) {
-            out << sock << ": peer connected: " << peer;
+          log.info([this, &space, addrlen, &peer](std::ostream &out) {
+            out << sock << ": peer connected: " << to_str(&space.addr, addrlen)
+                << " is " << peer;
           });
           exitmap_t &exits = pos->second;
           parent.conns.emplace_back(parent, clsock, &space.addr, addrlen, exits);
@@ -200,11 +202,23 @@ bool TCPEgress::Connection::process()
 
 void TCPEgress::Connection::handle_fd(uint32_t)
 {
+  Logger &log = parent.log;
   assert(sock >= 0);
   ssize_t rc = recv(sock, buf + len, sizeof buf - len, 0);
   if (rc <= 0) {
     /* The client has closed the connection, or it has timed out. */
     // TODO: Log the error if rc < 0.
+    if (rc == 0) {
+      log.trace([this](auto &out) {
+        out << "client closed: " << peeraddr.str();
+      });
+    } else {
+      int ec = errno;
+      log.trace([this, ec](auto &out) {
+        out << "client error: " << ec
+            << " (" << ::strerror(ec) << ") on " << peeraddr.str();
+      });
+    }
     fdev.cancel();
     close(sock);
     sock = -1;
@@ -213,10 +227,14 @@ void TCPEgress::Connection::handle_fd(uint32_t)
     parent.idev.set();
     return;
   } else {
+    typeof(len) nl = len + rc;
+    log.detail([rc, this, nl](auto &out) {
+      out << rc << "=recv(" << sock << ", *, "<< len << ") now " << nl;
+    });
     /* Be ready to receive more. */
     fdev.set(sock, EPOLLIN);
 
-    len += rc;
+    len = nl;
 
     /* Deliver any complete payloads to the exits, and clear the data
        out. */
