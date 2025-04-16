@@ -45,6 +45,9 @@
 #include "destruction.hh"
 #include "channels.hh"
 #include "network.hh"
+#include "sockaddrs.hh"
+#include "messages.hh"
+#include "clientid.hh"
 
 UDPAbsorber::UDPAbsorber(const std::string &name,
                          Scheduler &sched, ClientTable &cltab,
@@ -132,8 +135,15 @@ void UDPAbsorber::activate()
 void UDPAbsorber::sock_ready(uint32_t events)
 {
   assert(sock >= 0);
-  ssize_t rc = recvfrom(sock, buf, sizeof buf, 0, nullptr, nullptr);
+  union {
+    struct sockaddr addr;
+    unsigned char buf[256];
+  } space;
+  socklen_t addrlen = sizeof space;
+  ssize_t rc = recvfrom(sock, buf, sizeof buf, 0, &space.addr, &addrlen);
   if (rc >= 0) {
+    SocketAddress saddr(&space.addr, addrlen);
+    clid_t clid = cltab.seek(saddr); // as yet unused
     for (auto cp : channels)
       cp->submit(buf, rc);
   } else {
