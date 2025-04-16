@@ -67,8 +67,6 @@ class TCPIngress : public Ingress {
   int sock;
   bool connected, upout_ready;
 
-  struct gaicb addrinfo;
-
   DescriptorEvent fdev;
   void descriptor_ready(uint32_t);
 
