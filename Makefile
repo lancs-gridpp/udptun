@@ -26,6 +26,7 @@ MYABSPATH=$(foreach f,$1,$(if $(patsubst /%,,$f),$(MYCURDIR)$f,$f))
 -include udptun-env.mk
 
 binaries.cc += udptun
+udptun_obj += clientid
 udptun_obj += sockaddrs
 udptun_obj += destinations
 udptun_obj += destbank

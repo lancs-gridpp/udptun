@@ -39,7 +39,7 @@
 
 #include "clientid.hh"
 
-clientid_t ClientTable::seek(const SocketAddress &key)
+clid_t ClientTable::seek(const SocketAddress &key)
 {
   auto pos = rev.find(key);
   if (pos != rev.end()) {
@@ -113,10 +113,10 @@ ClientTable::ClientTable(Scheduler &sched,
     in >> cnt;
     for (std::size_t i = 0; i < cnt; i++) {
       SocketAddress addr;
-      clientid_t cid;
-      in >> cid >> addr;
-      rev[addr] = cid;
-      fwd.emplace(cid, addr);
+      clid_t clid;
+      in >> clid >> addr;
+      rev[addr] = clid;
+      fwd.emplace(clid, addr);
     }
   }
 }

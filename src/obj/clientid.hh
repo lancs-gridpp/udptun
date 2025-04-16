@@ -54,7 +54,7 @@ class ClientTable {
   const std::chrono::system_clock::duration purge_period;
   std::chrono::system_clock::time_point last_purge;
   const std::filesystem::path db;
-  clientid_t next_id;
+  clid_t next_id;
 
   struct entry {
     SocketAddress addr;
@@ -62,8 +62,8 @@ class ClientTable {
     entry(const SocketAddress &);
     void update();
   };
-  std::map<clientid_t, entry> fwd;
-  std::map<SocketAddress, clientid_t> rev;
+  std::map<clid_t, entry> fwd;
+  std::map<SocketAddress, clid_t> rev;
 
   void on_purge();
   void purge(std::chrono::system_clock::time_point);
@@ -73,7 +73,7 @@ public:
               std::chrono::system_clock::duration purge_period,
               const std::filesystem::path &);
   ~ClientTable();
-  clientid_t seek(const SocketAddress &);
+  clid_t seek(const SocketAddress &);
 };
 
 #endif
