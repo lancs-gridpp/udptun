@@ -54,11 +54,14 @@ bool length_to_bytes(payloadlen_t len, unsigned char *,
 bool label_to_bytes(label_t, unsigned char *,
                     std::size_t done, std::size_t pos,
                     std::vector<struct iovec> &);
+bool clid_to_bytes(clid_t, unsigned char *,
+                   std::size_t done, std::size_t pos,
+                   std::vector<struct iovec> &);
 
 /* If the message is complete in the buffer, extract the label and
    payload length, and return the start of the payload.  Otherwise,
    return null. */
-const unsigned char *decode_message(label_t &, payloadlen_t &,
+const unsigned char *decode_message(clid_t &, label_t &, payloadlen_t &,
                                     const unsigned char *, std::size_t got);
 
 #endif

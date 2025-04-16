@@ -182,9 +182,10 @@ TCPEgress::Connection::~Connection()
 bool TCPEgress::Connection::process()
 {
   /* Do we have a full packet? */
+  clid_t clid; // not yet used
   label_t label;
   payloadlen_t pktlen;
-  const unsigned char *base = decode_message(label, pktlen, buf, len);
+  const unsigned char *base = decode_message(clid, label, pktlen, buf, len);
   if (!base) return false; // Packet is incomplete.
 
   /* If this label is defined, deliver to each of the corresponding

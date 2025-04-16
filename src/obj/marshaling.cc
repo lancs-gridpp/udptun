@@ -61,7 +61,7 @@ void push_onto(std::vector<struct iovec> &vec, const unsigned char *base,
   vec.back().iov_len = len;
 }
 
-bool label_to_bytes(label_t cid, unsigned char *buf,
+bool label_to_bytes(label_t label, unsigned char *buf,
                     std::size_t done, std::size_t pos,
                     std::vector<struct iovec> &vec)
 {
@@ -69,8 +69,21 @@ bool label_to_bytes(label_t cid, unsigned char *buf,
   auto m = done > pos ? pos + MAX_LABEL_BYTES - done : MAX_LABEL_BYTES;
   assert(m >= 1);
   for (unsigned i = MAX_LABEL_BYTES - m; i < MAX_LABEL_BYTES; i++)
-    buf[i] = (cid >> (i * 8)) & 0xffu;
+    buf[i] = (label >> (i * 8)) & 0xffu;
   push_onto(vec, buf + (MAX_LABEL_BYTES - m), m);
+  return true;
+}
+
+bool clid_to_bytes(clid_t clid, unsigned char *buf,
+                    std::size_t done, std::size_t pos,
+                    std::vector<struct iovec> &vec)
+{
+  if (done >= pos + MAX_CLID_BYTES) return false;
+  auto m = done > pos ? pos + MAX_CLID_BYTES - done : MAX_CLID_BYTES;
+  assert(m >= 1);
+  for (unsigned i = MAX_CLID_BYTES - m; i < MAX_CLID_BYTES; i++)
+    buf[i] = (clid >> (i * 8)) & 0xffu;
+  push_onto(vec, buf + (MAX_CLID_BYTES - m), m);
   return true;
 }
 
@@ -87,25 +100,31 @@ bool length_to_bytes(payloadlen_t len, unsigned char *buf,
   return true;
 }
 
-const unsigned char *decode_message(label_t &label, payloadlen_t &pktlen,
+const unsigned char *decode_message(clid_t &clid,
+                                    label_t &label, payloadlen_t &pktlen,
                                     const unsigned char *base, std::size_t got)
 {
   /* Get the datagram length, if available. */
-  if (got < MAX_LABEL_BYTES + MAX_LENGTH_BYTES)
+  if (got < MAX_CLID_BYTES + MAX_LABEL_BYTES + MAX_LENGTH_BYTES)
     return nullptr;
-  pktlen = base[MAX_LABEL_BYTES];
+  pktlen = base[MAX_CLID_BYTES + MAX_LABEL_BYTES];
   pktlen <<= 8;
-  pktlen |= base[MAX_LABEL_BYTES + 1];
+  pktlen |= base[MAX_CLID_BYTES + MAX_LABEL_BYTES + 1];
 
   /* Do we have a complete packet? */
-  if (got < MAX_LABEL_BYTES + MAX_LENGTH_BYTES + pktlen)
+  if (got < MAX_CLID_BYTES + MAX_LABEL_BYTES + MAX_LENGTH_BYTES + pktlen)
     return nullptr;
 
+  /* Extract the client id. */
+  clid = base[0];
+  clid <<= 8;
+  clid |= base[1];
+
   /* Extract the label. */
-  label = base[0];
+  label = base[MAX_CLID_BYTES];
   label <<= 8;
-  label |= base[1];
+  label |= base[MAX_CLID_BYTES + 1];
 
   /* Return the start of the payload. */
-  return base + (MAX_LABEL_BYTES + MAX_LENGTH_BYTES);
+  return base + (MAX_CLID_BYTES + MAX_LABEL_BYTES + MAX_LENGTH_BYTES);
 }

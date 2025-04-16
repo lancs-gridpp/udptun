@@ -85,12 +85,14 @@ bool Channel::describe(std::vector<struct iovec> &iov)
     if (!current) return false;
     done = 0;
   }
-  label_to_bytes(label, channels, done, 0, iov);
+  clid_to_bytes(0, channels, done, 0, iov);
+  label_to_bytes(label, channels, done, MAX_CLID_BYTES, iov);
   // Assert size within two bytes.
   assert(current->size() <= 0xffffu);
-  length_to_bytes(current->size(), lenword, done, MAX_LABEL_BYTES, iov);
-  auto m = done > MAX_LABEL_BYTES + MAX_LENGTH_BYTES
-    ? MAX_LABEL_BYTES + MAX_LENGTH_BYTES + current->size() - done
+  length_to_bytes(current->size(), lenword, done,
+                  MAX_CLID_BYTES + MAX_LABEL_BYTES, iov);
+  auto m = done > MAX_CLID_BYTES + MAX_LABEL_BYTES + MAX_LENGTH_BYTES
+    ? MAX_CLID_BYTES + MAX_LABEL_BYTES + MAX_LENGTH_BYTES + current->size() - done
     : current->size();
   assert(m > 0);
   push_onto(iov, (current->base() + (current->size() - m)), m);
@@ -101,7 +103,8 @@ bool Channel::consumed(std::size_t done)
 {
   assert(current);
   this->done += done;
-  if (this->done == MAX_LABEL_BYTES + MAX_LENGTH_BYTES + current->size()) {
+  if (this->done == MAX_CLID_BYTES + MAX_LABEL_BYTES
+      + MAX_LENGTH_BYTES + current->size()) {
     Payload dummy;
     queue.consume(dummy);
     current = nullptr;
