@@ -86,7 +86,7 @@ std::string to_str(const struct sockaddr *addr, socklen_t addrlen)
                        serv, sizeof serv, NI_NUMERICHOST | NI_NUMERICSERV);
   switch (rc) {
   case 0:
-    return std::string(host) + ":" + serv;
+    return std::string("[") + host + "]:" + serv;
   case EAI_AGAIN:
     return "AGAIN";
   case EAI_BADFLAGS:
