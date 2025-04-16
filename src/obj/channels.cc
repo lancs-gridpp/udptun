@@ -124,7 +124,7 @@ void Channel::queue_ready()
   ingress->ready(*this);
 }
 
-void Channel::submit(const void *base, std::size_t len)
+void Channel::submit(clid_t clid, const void *base, std::size_t len)
 {
   queue.push(base, len);
 }

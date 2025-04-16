@@ -145,7 +145,7 @@ void UDPAbsorber::sock_ready(uint32_t events)
     SocketAddress saddr(&space.addr, addrlen);
     clid_t clid = cltab.seek(saddr); // as yet unused
     for (auto cp : channels)
-      cp->submit(buf, rc);
+      cp->submit(clid, buf, rc);
   } else {
     // TODO
   }

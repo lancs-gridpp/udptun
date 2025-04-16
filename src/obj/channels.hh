@@ -75,7 +75,7 @@ public:
           Quota &, const std::filesystem::path &);
   ~Channel();
   void activate();
-  void submit(const void *, std::size_t);
+  void submit(clid_t, const void *, std::size_t);
   const std::string &identify();
 };
 
