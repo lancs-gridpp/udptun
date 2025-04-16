@@ -62,9 +62,12 @@ void TCPEgress::Listener::handle_fd(uint32_t)
   /* A connection has been requested.  Accept it to get the file
      descriptor, and make a Connection object out of it. */
   do {
-    struct sockaddr addr;
-    socklen_t addrlen = sizeof addr;
-    int clsock = ::accept(sock, &addr, &addrlen);
+    union {
+      struct sockaddr addr;
+      unsigned char buf[256];
+    } space;
+    socklen_t addrlen = sizeof space;
+    int clsock = ::accept(sock, &space.addr, &addrlen);
     if (clsock < 0) {
       switch (errno) {
       case ENETDOWN:
@@ -105,7 +108,7 @@ void TCPEgress::Listener::handle_fd(uint32_t)
       /* A connection was established.  Make sure we use it. */
       assert(clsock >= 0);
       std::string peer;
-      if (parent.peers.seek(peer, &addr, addrlen)) {
+      if (parent.peers.seek(peer, &space.addr, addrlen)) {
         auto pos = parent.exits.find(peer);
         if (pos == parent.exits.end()) {
           log.warn([this, &peer](std::ostream &out) {
@@ -120,8 +123,8 @@ void TCPEgress::Listener::handle_fd(uint32_t)
           parent.conns.emplace_back(parent, clsock, exits);
         }
       } else {
-        log.warn([this, &addr, addrlen](std::ostream &out) {
-          out << sock << ":unknown peer " << to_str(&addr, addrlen);
+        log.warn([this, &space, addrlen](std::ostream &out) {
+          out << sock << ": unknown peer " << to_str(&space.addr, addrlen);
         });
         ::close(clsock);
       }
