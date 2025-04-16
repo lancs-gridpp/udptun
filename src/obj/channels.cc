@@ -51,7 +51,7 @@ Channel::Channel(const std::string &name,
                  std::shared_ptr<Ingress> ingress, label_t label,
                  Quota &quota,
                  const std::filesystem::path &dir)
-  : name(name), log("udptun.ingress.channel", std::string("ingress:") + name),
+  : name(name), log("udptun.ingress.channel", std::string("inq:") + name),
     ingress(ingress), label(label),
     queue_event(sched, std::bind(&Channel::queue_ready, this)),
     queue(std::string("ingress:") + name,
