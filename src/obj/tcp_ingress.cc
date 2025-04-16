@@ -200,6 +200,7 @@ void TCPIngress::try_connect()
     }
 
     if (sock < 0) {
+      assert(!ainf);
       /* We failed to open a socket.  Try again in a bit. */
       rstev.set(std::chrono::seconds(30));
       return;
