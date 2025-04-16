@@ -101,6 +101,7 @@ void TCPIngress::descriptor_ready(uint32_t evs)
     if (soerr != 0) {
       // TODO: Log error.
       ainf = ainf->ai_next;
+      clear_socket();
       try_connect();
       return;
     }
@@ -151,6 +152,7 @@ void TCPIngress::address_resolved(const struct addrinfo *p)
   /* Record the initial address to try. */
   ainf = p;
   connected = false;
+  assert(sock < 0);
   try_connect();
 }
 
@@ -205,7 +207,7 @@ void TCPIngress::try_connect()
 
     /* Try to bind the socket before connecting. */
     if (::bind(sock, bind_curr->ai_addr, bind_curr->ai_addrlen) != 0) {
-      ::close(sock);
+      clear_socket();
       continue;
     }
 
