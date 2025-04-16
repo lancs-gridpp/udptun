@@ -51,6 +51,7 @@
 #include "idle.hh"
 #include "messages.hh"
 #include "peers.hh"
+#include "sockaddrs.hh"
 
 class Quota;
 class DestinationBank;
@@ -81,11 +82,13 @@ class TCPEgress : public Egress {
     unsigned char buf[MAX_LABEL_BYTES + MAX_LENGTH_BYTES + MAX_LENGTH];
     std::size_t len;
     DescriptorEvent fdev;
+    SocketAddress peeraddr;
 
     bool process();
 
   public:
-    Connection(TCPEgress &, int sock, exitmap_t &);
+    Connection(TCPEgress &, int sock,
+               const struct sockaddr *, socklen_t, exitmap_t &);
     ~Connection();
   };
   friend class Connection;

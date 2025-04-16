@@ -120,7 +120,7 @@ void TCPEgress::Listener::handle_fd(uint32_t)
             out << sock << ": peer connected: " << peer;
           });
           exitmap_t &exits = pos->second;
-          parent.conns.emplace_back(parent, clsock, exits);
+          parent.conns.emplace_back(parent, clsock, &space.addr, addrlen, exits);
         }
       } else {
         log.warn([this, &space, addrlen](std::ostream &out) {
@@ -156,10 +156,12 @@ TCPEgress::Listener::~Listener()
 }
 
 TCPEgress::Connection::Connection(TCPEgress &parent, int sock,
+                                  const struct sockaddr *addr, socklen_t addrlen,
                                   exitmap_t &exits)
   : parent(parent), sock(sock), exits(exits), len(0),
     fdev(parent.sched,
-         std::bind(&Connection::handle_fd, this, std::placeholders::_1))
+         std::bind(&Connection::handle_fd, this, std::placeholders::_1)),
+    peeraddr(addr, addrlen)
 {
   /* Get ready to receive immediately. */
   assert(sock >= 0);
