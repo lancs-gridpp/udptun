@@ -85,7 +85,7 @@ bool Channel::describe(std::vector<struct iovec> &iov)
     if (!current) return false;
     done = 0;
   }
-  clid_to_bytes(0, channels, done, 0, iov);
+  clid_to_bytes(0, clids, done, 0, iov);
   label_to_bytes(label, channels, done, MAX_CLID_BYTES, iov);
   // Assert size within two bytes.
   assert(current->size() <= 0xffffu);

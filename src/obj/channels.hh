@@ -60,7 +60,7 @@ class Channel : Streamer {
   IdleEvent queue_event;
   PayloadQueue queue;
   Payload *current;
-  unsigned char channels[MAX_LABEL_BYTES], lenword[2];
+  unsigned char clids[MAX_CLID_BYTES], channels[MAX_LABEL_BYTES], lenword[2];
   std::size_t done;
   void queue_ready();
 
