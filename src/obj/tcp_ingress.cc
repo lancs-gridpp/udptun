@@ -200,7 +200,8 @@ void TCPIngress::try_connect()
           break;
       } else {
         log.debug([this](auto &out) {
-          out << "can't bind to reach " << to_str(ainf->ai_addr, ainf->ai_addrlen);
+          out << "can't bind to reach "
+              << to_str(ainf->ai_addr, ainf->ai_addrlen);
         });
       }
       ainf = ainf->ai_next;
