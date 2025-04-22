@@ -296,11 +296,19 @@ void TCPIngress::try_send()
              Ensure we're told when we can send some more. */
           src.consumed(0);
           fdev.set(sock, EPOLLOUT);
+          log.debug([this](auto &out) {
+            out << "sendmsg(" << sock << ") block on "
+                << to_str(ainf->ai_addr, ainf->ai_addrlen);
+          });
           return;
         }
 
         /* We failed to send the whole message. */
-        // TODO: Log error.
+        log.error([ec, this](auto &out) {
+          out << "sendmsg(" << sock << ")=" << ec
+              << " (" << strerror(ec) << ") on "
+              << to_str(ainf->ai_addr, ainf->ai_addrlen);
+        });
 
         /* Ensure the source will restart its message. */
         src.failed();
