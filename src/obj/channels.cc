@@ -143,7 +143,7 @@ void Channel::queue_ready()
   ingress->ready(*this);
 }
 
-void Channel::submit(clid_t clid, const void *base, std::size_t len)
+void Channel::submit(clid_t clid, const unsigned char *base, std::size_t len)
 {
   Chunk chs[2] = {
     { &clid, sizeof clid },
