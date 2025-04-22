@@ -119,9 +119,10 @@ bool Channel::describe(std::vector<struct iovec> &iov)
 bool Channel::consumed(std::size_t done)
 {
   assert(current);
+  std::size_t plsize = current->size() - sizeof(clid_t);
   this->done += done;
   if (this->done == MAX_CLID_BYTES + MAX_LABEL_BYTES
-      + MAX_LENGTH_BYTES + current->size()) {
+      + MAX_LENGTH_BYTES + plsize) {
     Payload dummy;
     queue.consume(dummy);
     current = nullptr;
