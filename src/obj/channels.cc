@@ -99,6 +99,11 @@ bool Channel::describe(std::vector<struct iovec> &iov)
      id stuck in front of it. */
   std::size_t plsize = current->size() - sizeof clid;
   const unsigned char *base = current->base() + sizeof clid;
+  log.detail([clid, plsize, base, this](auto &out) {
+    out << "recovered(" << clid << ", " << plsize << ", ";
+    Payload::describe(out, base, plsize);
+    out << ") with " << done << " done";
+  });
 
   clid_to_bytes(clid, clids, done, 0, iov);
   label_to_bytes(label, channels, done, MAX_CLID_BYTES, iov);
@@ -121,15 +126,26 @@ bool Channel::consumed(std::size_t done)
 {
   assert(current);
   std::size_t plsize = current->size() - sizeof(clid_t);
+  const unsigned char *base = current->base() + sizeof(clid_t);
   this->done += done;
   if (this->done == MAX_CLID_BYTES + MAX_LABEL_BYTES
       + MAX_LENGTH_BYTES + plsize) {
+    log.detail([done, plsize, base](auto &out) {
+      out << "last " << done << " for (?, " <<  plsize << ", ";
+      Payload::describe(out, base, plsize);
+      out << ")";
+    });
     Payload dummy;
     queue.consume(dummy);
     current = nullptr;
     queue.poke();
     return true;
   }
+  log.detail([done, plsize, base, this](auto &out) {
+    out << "partial " << done << " for (?, " <<  plsize << ", ";
+    Payload::describe(out, base, plsize);
+    out << ") reaches " << this->done;
+  });
   return false;
 }
 
@@ -150,4 +166,9 @@ void Channel::submit(clid_t clid, const unsigned char *base, std::size_t len)
     { base, len },
   };
   queue.push(chs, sizeof chs / sizeof chs[0]);
+  log.detail([clid, base, len](auto &out) {
+    out << "pushed(" << clid << ", " << len << ", ";
+    Payload::describe(out, base, len);
+    out << ")";
+  });
 }
