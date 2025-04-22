@@ -98,6 +98,7 @@ bool Channel::describe(std::vector<struct iovec> &iov)
   /* The transmitted payload is the queue's payload minus the client
      id stuck in front of it. */
   std::size_t plsize = current->size() - sizeof clid;
+  const unsigned char *base = current->base() + sizeof clid;
 
   clid_to_bytes(clid, clids, done, 0, iov);
   label_to_bytes(label, channels, done, MAX_CLID_BYTES, iov);
@@ -112,7 +113,7 @@ bool Channel::describe(std::vector<struct iovec> &iov)
     ? MAX_CLID_BYTES + MAX_LABEL_BYTES + MAX_LENGTH_BYTES + plsize - done
     : plsize;
   assert(m > 0);
-  push_onto(iov, (current->base() + (plsize - m)), m);
+  push_onto(iov, (base + (plsize - m)), m);
   return true;
 }
 
