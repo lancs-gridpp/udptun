@@ -54,7 +54,8 @@ Egress *make_egress(Scheduler &sched,
   if (chroot) {
     for (auto iter = chroot.begin(); iter != chroot.end(); iter++) {
       auto label = iter->first.as<label_t>();
-      for (auto niter = iter->second.begin(); niter != iter->second.end(); niter++)
+      for (auto niter = iter->second.begin();
+           niter != iter->second.end(); niter++)
         channels[label].insert(niter->as<std::string>());
     }
   }
