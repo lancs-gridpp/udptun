@@ -78,7 +78,7 @@ TCPIngress::~TCPIngress()
 void TCPIngress::descriptor_ready(uint32_t evs)
 {
   assert(sock >= 0);
-  if (evs & EPOLLRDHUP) {
+  if (evs & EPOLLHUP) {
     /* The peer closed the connection.  Discard the socket, and try
        again in a while. */
     log.debug([this](auto &out) {
