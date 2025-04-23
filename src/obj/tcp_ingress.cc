@@ -93,9 +93,6 @@ void TCPIngress::descriptor_ready(uint32_t evs)
      completing? */
   assert(evs & EPOLLOUT);
   if (!connected) {
-    log.debug([this](auto &out) {
-      out << "connected " << to_str(ainf->ai_addr, ainf->ai_addrlen);
-    });
     int soerr;
     socklen_t soerrlen = sizeof soerr;
     int rc = getsockopt(sock, SOL_SOCKET, SO_ERROR, &soerr, &soerrlen);
@@ -115,6 +112,9 @@ void TCPIngress::descriptor_ready(uint32_t evs)
 
     /* Record that the connection is complete, and wait for another
        write event. */
+    log.debug([this](auto &out) {
+      out << "connected " << to_str(ainf->ai_addr, ainf->ai_addrlen);
+    });
     connected = true;
     fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
     return;
@@ -238,7 +238,12 @@ void TCPIngress::try_connect()
       int ec = errno;
       switch (ec) {
       default:
-        // TODO: Log error.
+        log.warn([this, ec](auto &out) {
+          out << sock << " failed to connect to "
+              << to_str(ainf->ai_addr, ainf->ai_addrlen)
+              << ": " << ec << " (" << strerror(ec) << ")";
+        });
+
         /* Close the socket, and try the next address entry
            immediately. */
         clear_socket();
@@ -247,6 +252,10 @@ void TCPIngress::try_connect()
 
       case EINPROGRESS:
       case EAGAIN:
+        log.detail([this](auto &out) {
+          out << sock << " async connect to "
+              << to_str(ainf->ai_addr, ainf->ai_addrlen);
+        });
         /* We have initiated a non-blocking connect.  Get notified when
            the connection can be resolved. */
         fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
@@ -256,6 +265,10 @@ void TCPIngress::try_connect()
 
     /* We're immediately connected, so record that, and check when we
        can actually write. */
+    log.detail([this](auto &out) {
+      out << sock << " sync connect to "
+          << to_str(ainf->ai_addr, ainf->ai_addrlen);
+    });
     connected = true;
     fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
     return;
