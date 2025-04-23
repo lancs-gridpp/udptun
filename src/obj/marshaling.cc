@@ -69,7 +69,7 @@ bool label_to_bytes(label_t label, unsigned char *buf,
   auto m = done > pos ? pos + MAX_LABEL_BYTES - done : MAX_LABEL_BYTES;
   assert(m >= 1);
   for (unsigned i = MAX_LABEL_BYTES - m; i < MAX_LABEL_BYTES; i++)
-    buf[i] = (label >> (i * 8)) & 0xffu;
+    buf[i] = (label >> ((MAX_LABEL_BYTES - 1 - i) * 8)) & 0xffu;
   push_onto(vec, buf + (MAX_LABEL_BYTES - m), m);
   return true;
 }
@@ -82,7 +82,7 @@ bool clid_to_bytes(clid_t clid, unsigned char *buf,
   auto m = done > pos ? pos + MAX_CLID_BYTES - done : MAX_CLID_BYTES;
   assert(m >= 1);
   for (unsigned i = MAX_CLID_BYTES - m; i < MAX_CLID_BYTES; i++)
-    buf[i] = (clid >> (i * 8)) & 0xffu;
+    buf[i] = (clid >> ((MAX_CLID_BYTES - 1 - i) * 8)) & 0xffu;
   push_onto(vec, buf + (MAX_CLID_BYTES - m), m);
   return true;
 }
