@@ -119,13 +119,13 @@ EmitterMaker::~EmitterMaker()
   if (sock >= 0) ::close(sock);
 }
 
-void EmitterMaker::make(const std::string &name, Scheduler &sched,
+void EmitterMaker::make(const std::string &name,
                         destination_emitter_map_t &result)
 {
   if (sock < 0) return;
 
   std::shared_ptr<Emitter> r =
-    std::shared_ptr<Emitter>(new Emitter(name, sched, sock,
+    std::shared_ptr<Emitter>(new Emitter(name, sock,
                                          chosen->ai_family, chosen->ai_protocol));
   sock = -1;
 
@@ -139,34 +139,11 @@ void EmitterMaker::make(const std::string &name, Scheduler &sched,
 
 
 
-
-void Emitter::prime_all()
-{
-  assert(ready);
-  /* Prime each user to be able to send. */
-  for (auto pos = users.begin(); pos != users.end(); pos = users.begin()) {
-    auto ptr = *pos;
-    users.erase(pos);
-    (*ptr)();
-  }
-}
-
-void Emitter::handle_fd(uint32_t events)
-{
-  ready = true;
-  prime_all();
-}
-
-Emitter::Emitter(const std::string &name, Scheduler &sched,
+Emitter::Emitter(const std::string &name,
                  int sock, int family, int protocol)
   : name(name),
     log("udptun.egress.emitter", std::string("emitter:") + name),
-    sock(sock), family(family), protocol(protocol), ready(false),
-    fdev(sched, std::bind(&Emitter::handle_fd, this, std::placeholders::_1))
-{
-  fdev.name(std::string("emitter:") + name + ":descriptor");
-  fdev.set(sock, EPOLLOUT);
-}
+    sock(sock), family(family), protocol(protocol) { }
 
 int Emitter::send(const unsigned char *buf, size_t len,
                   Destination &dst, int flags)
@@ -174,25 +151,15 @@ int Emitter::send(const unsigned char *buf, size_t len,
   if (sock < 0)
     return EBADF;
 
-  /* Don't bother calling again if we're already blocked. */
-  if (!ready)
-    return EWOULDBLOCK;
-
   /* Make this call non-blocking. */
   flags |= MSG_DONTWAIT;
 
   assert(sock >= 0);
   auto rc = dst.send(family, protocol, sock, buf, len, flags);
 
-  /* If we'd block (not that it's likely), ask the scheduler to tell
-     us when we wouldn't, and record that there's no point in trying
-     again until we can.  Also standardize the returned error
-     code. */
-  if (rc == EWOULDBLOCK || rc == EAGAIN) {
-    fdev.set(sock, EPOLLOUT);
-    ready = false;
+  /* Standardize the returned error code. */
+  if (rc == EWOULDBLOCK || rc == EAGAIN)
     return EWOULDBLOCK;
-  }
 
   /* Pass other errors through. */
   if (rc != 0) return rc;
@@ -202,29 +169,6 @@ int Emitter::send(const unsigned char *buf, size_t len,
 
 Emitter::~Emitter()
 {
-  /* We shouldn't have any users by now. */
-  assert(users.empty());
-
-  /* Make sure we receive no more descriptor events, before closing
-     the socket. */
-  fdev.cancel();
   if (sock >= 0)
     close(sock);
-}
-
-void Emitter::notify(const user_t &user)
-{
-  users.insert(&user);
-  if (sock < 0) return;
-  if (ready)
-    prime_all();
-  else
-    fdev.set(sock, EPOLLOUT);
-}
-
-void Emitter::forget(const user_t &user)
-{
-  users.erase(&user);
-  if (users.empty())
-    fdev.cancel();
 }

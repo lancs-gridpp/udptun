@@ -196,7 +196,7 @@ TCPEgress::Connection::ClientState::ClientState(unsigned salt,
 
     /* Create the emitter, map the matched destinations to it, and
        eliminate those destinations from the required set. */
-    mkr.make("dummy", sched, dest_em);
+    mkr.make("dummy", dest_em);
   }
 
   /* Populate the mapping from label to <destination, emitter> pair. */

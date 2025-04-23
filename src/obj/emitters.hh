@@ -66,7 +66,7 @@ public:
   EmitterMaker(destination_set_t &required);
   ~EmitterMaker();
   const destination_set_t &matched() { return matched_; }
-  void make(const std::string &name, Scheduler &,
+  void make(const std::string &name,
             destination_emitter_map_t &result);
 };
 
@@ -79,22 +79,12 @@ private:
   Logger log;
   int sock;
   const int family, protocol;
-  bool ready;
-  DescriptorEvent fdev;
 
-  std::set<const user_t *> users;
-
-  void handle_fd(uint32_t);
-  void prime_all();
-
-  Emitter(const std::string &name, Scheduler &sched,
+  Emitter(const std::string &name,
           int sock, int family, int protocol);
 
 public:
-  operator bool() { return ready; }
   int send(const unsigned char *buf, size_t len, Destination &, int flags);
-  void notify(const user_t &user);
-  void forget(const user_t &user);
   ~Emitter();
 };
 
