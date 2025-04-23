@@ -44,6 +44,7 @@ void Egress::activate() { }
 Egress *make_egress(Scheduler &sched,
                     const std::string &egress_name,
                     DestinationBank &dests,
+                    PeerTable &peers,
                     const YAML::Node &cfg)
 {
   Egress *result = nullptr;
@@ -62,7 +63,7 @@ Egress *make_egress(Scheduler &sched,
 
   if (cfg["tcp"]) {
     result = new TCPEgress(egress_name, sched,
-                           dests, channels, cfg["tcp"]);
+                           dests, peers, channels, cfg["tcp"]);
   }
   return result;
 }

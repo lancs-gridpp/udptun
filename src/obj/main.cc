@@ -72,6 +72,7 @@
 #include "logging.hh"
 #include "destbank.hh"
 #include "clientid.hh"
+#include "peers.hh"
 
 template <class T>
 static void populate(std::map<std::string, std::shared_ptr<T>> &dst,
@@ -242,6 +243,7 @@ static int trapped_main(Logger &log, Config &config)
 
     log.info("starting");
 
+    PeerTable peers;
     DestinationBank dbank;
     ClientTable clients(sched, std::chrono::hours(1), queuedir / "clients.db");
     std::filesystem::path egress_qdir = queuedir / "egress";
@@ -316,16 +318,17 @@ static int trapped_main(Logger &log, Config &config)
         const auto &egress_root = root["egress"];
         dbank.load(egress_root["destinations"],
                    egress_root["groups"]);
+        peers.load(egress_root["peers"]);
 
         /* Create the configured egresses, using the available exits.
            Sockets are not created at this stage; only dependencies
            are established, so that missing dependencies will fail the
            configuration phase. */
         populate<Egress>(egress_index, "tunnels", egress_root,
-                         [&sched, &dbank]
+                         [&sched, &dbank, &peers]
                          (const std::string &inst,
                           const YAML::Node &cfg) {
-                           return make_egress(sched, inst, dbank, cfg);
+                           return make_egress(sched, inst, dbank, peers, cfg);
                          });
       }
     }

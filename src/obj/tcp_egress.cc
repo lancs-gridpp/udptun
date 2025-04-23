@@ -44,6 +44,7 @@
 #include <cstring>
 
 #include <sstream>
+#include <string>
 
 #include "tcp_egress.hh"
 #include "destruction.hh"
@@ -107,10 +108,18 @@ void TCPEgress::Listener::handle_fd(uint32_t)
     default:
       /* A connection was established.  Make sure we use it. */
       assert(clsock >= 0);
-      parent.conns.emplace_back(parent, clsock, &space.addr, addrlen);
-      log.info([this, &space, addrlen](std::ostream &out) {
+      std::string pname;
+      if (parent.peers.seek(pname, &space.addr, addrlen)) {
+        parent.conns.emplace_back(parent, pname, clsock, &space.addr, addrlen);
+        log.info([this, &space, addrlen](std::ostream &out) {
           out << sock << ": new peer " << to_str(&space.addr, addrlen);
-      });
+        });
+      } else {
+        log.warn([this, &space, addrlen](auto &out) {
+          out << sock << ": unknown peer " << to_str(&space.addr, addrlen);
+        });
+        ::close(clsock);
+      }
       break;
     }
 
@@ -138,10 +147,12 @@ TCPEgress::Listener::~Listener()
     close(sock);
 }
 
-TCPEgress::Connection::Connection(TCPEgress &parent, int sock,
+TCPEgress::Connection::Connection(TCPEgress &parent,
+                                  const std::string &name, int sock,
                                   const struct sockaddr *addr, socklen_t addrlen)
   : parent(parent),
-    name(to_str(addr, addrlen)),
+    name(name),
+    salt(std::hash<std::string>{}(name)),
     sock(sock), len(0),
     fdev(parent.sched,
          std::bind(&Connection::handle_fd, this, std::placeholders::_1)),
@@ -257,7 +268,6 @@ bool TCPEgress::Connection::process()
     for (size_t i = 0; i < pktlen; i++)
       out << ' ' << sformat("%02X", base[i]);
   });
-  unsigned salt = 0; // TODO
   auto [ pos, ins ] = clstats.try_emplace(clid,
                                           parent.name,
                                           name,
@@ -266,7 +276,7 @@ bool TCPEgress::Connection::process()
                                           parent.channels, parent.dbank,
                                           parent.sched);
   if (ins)
-    parent.log.detail([this, salt, clid](auto &out) {
+    parent.log.detail([this, clid](auto &out) {
       out << name << ": new entry for " << clid << '/' << salt;
     });
   auto &clstat = pos->second;
@@ -325,6 +335,7 @@ void TCPEgress::Connection::handle_fd(uint32_t)
 TCPEgress::TCPEgress(const std::string &name,
                      Scheduler &sched,
                      DestinationBank &dbank,
+                     PeerTable &peers,
                      const channelmap_t &channels,
                      const YAML::Node &cfg)
   : name(name),
@@ -335,7 +346,8 @@ TCPEgress::TCPEgress(const std::string &name,
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>()),
-    channels(channels), dbank(dbank) { }
+    channels(channels), dbank(dbank),
+    peers(&peers) { }
 
 void TCPEgress::flush()
 {

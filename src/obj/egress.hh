@@ -53,6 +53,7 @@ class Exit;
 class Scheduler;
 class Destination;
 class DestinationBank;
+class PeerTable;
 
 struct Egress {
   virtual void activate();
@@ -64,6 +65,7 @@ typedef std::map<label_t, std::set<std::string>> channelmap_t;
 Egress *make_egress(Scheduler &,
                     const std::string &egress_name,
                     DestinationBank &dests,
+                    PeerTable &peers,
                     const YAML::Node &);
 
 #endif

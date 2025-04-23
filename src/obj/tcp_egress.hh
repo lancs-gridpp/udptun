@@ -52,6 +52,7 @@
 #include "idle.hh"
 #include "messages.hh"
 #include "sockaddrs.hh"
+#include "peers.hh"
 
 class DestinationBank;
 class Destination;
@@ -78,6 +79,7 @@ class TCPEgress : public Egress {
     friend TCPEgress;
     TCPEgress &parent;
     std::string name;
+    unsigned salt;
     int sock;
     void handle_fd(uint32_t);
     unsigned char buf[MAX_CLID_BYTES + MAX_LABEL_BYTES +
@@ -108,7 +110,7 @@ class TCPEgress : public Egress {
     bool process();
 
   public:
-    Connection(TCPEgress &, int sock,
+    Connection(TCPEgress &, const std::string &name, int sock,
                const struct sockaddr *, socklen_t);
     ~Connection();
   };
@@ -123,6 +125,7 @@ class TCPEgress : public Egress {
   const std::string host, srv;
   channelmap_t channels;
   DestinationBank &dbank;
+  PeerTable peers;
 
   void flush();
 
@@ -130,6 +133,7 @@ public:
   TCPEgress(const std::string &name,
             Scheduler &sched,
             DestinationBank &dests,
+            PeerTable &peers,
             const channelmap_t &channels,
             const YAML::Node &cfg);
   void activate();
