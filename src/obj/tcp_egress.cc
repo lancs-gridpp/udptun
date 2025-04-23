@@ -140,7 +140,9 @@ TCPEgress::Listener::~Listener()
 
 TCPEgress::Connection::Connection(TCPEgress &parent, int sock,
                                   const struct sockaddr *addr, socklen_t addrlen)
-  : parent(parent), sock(sock), len(0),
+  : parent(parent),
+    name(to_str(addr, addrlen)),
+    sock(sock), len(0),
     fdev(parent.sched,
          std::bind(&Connection::handle_fd, this, std::placeholders::_1)),
     peeraddr(addr, addrlen)
@@ -159,11 +161,16 @@ TCPEgress::Connection::~Connection()
     close(sock);
 }
 
-TCPEgress::Connection::ClientState::ClientState(unsigned salt,
+TCPEgress::Connection::ClientState::ClientState(const std::string &ename,
+                                                const std::string &pname,
+                                                clid_t clid,
+                                                unsigned salt,
                                                 channelmap_t &chmap,
                                                 DestinationBank &dbank,
                                                 Scheduler &sched)
-  : last_used(std::chrono::system_clock::now())
+  : log("udptun.egress.tunnel.tcp.client",
+        ename + ':' + pname + ':' + std::to_string(clid)),
+    last_used(std::chrono::system_clock::now())
 {
   /* Get a full set of destinations that we need to talk to, and
      ensure they are activated.  Also keep a reverse map from
@@ -221,6 +228,9 @@ void TCPEgress::Connection::ClientState::deliver(label_t label,
 
   /* Send the message to each destination, using an appropriate
      emitter. */
+  log.detail([&pos](auto &out) {
+    out << "sending to " << pos->second.size();
+  });
   for (auto &ent : pos->second)
     ent.second->send(base, len, *ent.first.get(), 0);
 
@@ -233,13 +243,32 @@ bool TCPEgress::Connection::process()
   clid_t clid;
   label_t label;
   payloadlen_t pktlen;
+  parent.log.detail([this](auto &out) {
+    out << name << ": buffer (" << len << "):";
+    for (size_t i = 0; i < len; i++)
+      out << ' ' << sformat("%02X", buf[i]);
+  });
   const unsigned char *base = decode_message(clid, label, pktlen, buf, len);
   if (!base) return false; // Packet is incomplete.
 
+  parent.log.detail([this, clid, label, pktlen, base](auto &out) {
+    out << name << ": clid=" << clid << " label=" << label
+        << " len=" << pktlen << " payload=";
+    for (size_t i = 0; i < pktlen; i++)
+      out << ' ' << sformat("%02X", base[i]);
+  });
   unsigned salt = 0; // TODO
-  auto [ pos, ins ] = clstats.try_emplace(clid, salt,
+  auto [ pos, ins ] = clstats.try_emplace(clid,
+                                          parent.name,
+                                          name,
+                                          clid,
+                                          salt,
                                           parent.channels, parent.dbank,
                                           parent.sched);
+  if (ins)
+    parent.log.detail([this, salt, clid](auto &out) {
+      out << name << ": new entry for " << clid << '/' << salt;
+    });
   auto &clstat = pos->second;
   clstat.deliver(label, base, pktlen);
 
@@ -259,13 +288,13 @@ void TCPEgress::Connection::handle_fd(uint32_t)
     // TODO: Log the error if rc < 0.
     if (rc == 0) {
       log.trace([this](auto &out) {
-        out << "client closed: " << peeraddr.str();
+        out << name << ": client closed";
       });
     } else {
       int ec = errno;
       log.trace([this, ec](auto &out) {
-        out << "client error: " << ec
-            << " (" << ::strerror(ec) << ") on " << peeraddr.str();
+        out << name << ": client error: " << ec
+            << " (" << ::strerror(ec) << ")";
       });
     }
     fdev.cancel();
@@ -278,7 +307,8 @@ void TCPEgress::Connection::handle_fd(uint32_t)
   } else {
     typeof(len) nl = len + rc;
     log.detail([rc, this, nl](auto &out) {
-      out << rc << "=recv(" << sock << ", *, "<< len << ") now " << nl;
+      out << name << ": " << rc
+          << "=recv(" << sock << ", *, "<< len << ") now " << nl;
     });
     /* Be ready to receive more. */
     fdev.set(sock, EPOLLIN);

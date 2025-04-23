@@ -77,6 +77,7 @@ class TCPEgress : public Egress {
   class Connection {
     friend TCPEgress;
     TCPEgress &parent;
+    std::string name;
     int sock;
     void handle_fd(uint32_t);
     unsigned char buf[MAX_CLID_BYTES + MAX_LABEL_BYTES +
@@ -86,12 +87,16 @@ class TCPEgress : public Egress {
     SocketAddress peeraddr;
 
     class ClientState {
+      Logger log;
       std::chrono::system_clock::time_point last_used;
       std::map<label_t, std::map<std::shared_ptr<Destination>,
                                  std::shared_ptr<Emitter>>> outlets;
 
     public:
-      ClientState(unsigned salt, channelmap_t &, DestinationBank &, Scheduler &);
+      ClientState(const std::string &ename,
+                  const std::string &pname,
+                  clid_t clid,
+                  unsigned salt, channelmap_t &, DestinationBank &, Scheduler &);
       void deliver(label_t, const unsigned char *, std::size_t);
       bool expired(std::chrono::system_clock::time_point epoch) {
         return last_used < epoch;
