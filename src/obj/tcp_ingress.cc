@@ -80,15 +80,22 @@ void TCPIngress::descriptor_ready(uint32_t evs)
   assert(sock >= 0);
   if (evs & (EPOLLHUP | EPOLLRDHUP)) {
     if (!connected) {
-      /* The connection failed. */
-      log.debug([this](auto &out) {
-        out << "connect failed: " << to_str(ainf->ai_addr, ainf->ai_addrlen);
+      /* The connection failed.  Why?  Try the next entry. */
+      int soerr;
+      socklen_t soerrlen = sizeof soerr;
+      int rc = getsockopt(sock, SOL_SOCKET, SO_ERROR, &soerr, &soerrlen);
+      if (rc != 0)
+        throw std::system_error(errno, std::system_category(),
+                                "getsockopt(SOL_SOCKET, SO_ERROR)");
+      assert(soerr != 0);
+      log.debug([this, soerr](auto &out) {
+        out << "connect failed: " << to_str(ainf->ai_addr, ainf->ai_addrlen)
+            << ": " << soerr << " (" << ::strerror(soerr) << ")";
       });
-    } else {
-      /* The peer closed the connection. */
-      log.debug([this](auto &out) {
-        out << "peer closed: " << to_str(ainf->ai_addr, ainf->ai_addrlen);
-      });
+      ainf = ainf->ai_next;
+      clear_socket();
+      try_connect();
+      return;
     }
 
     /* Discard the socket, and try again in a while. */
