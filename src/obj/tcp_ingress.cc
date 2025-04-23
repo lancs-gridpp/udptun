@@ -78,7 +78,7 @@ TCPIngress::~TCPIngress()
 void TCPIngress::descriptor_ready(uint32_t evs)
 {
   assert(sock >= 0);
-  if (evs & EPOLLHUP) {
+  if (evs & (EPOLLHUP | EPOLLRDHUP)) {
     /* The peer closed the connection.  Discard the socket, and try
        again in a while. */
     log.debug([this](auto &out) {
@@ -116,7 +116,7 @@ void TCPIngress::descriptor_ready(uint32_t evs)
     /* Record that the connection is complete, and wait for another
        write event. */
     connected = true;
-    fdev.set(sock, EPOLLOUT);
+    fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
     return;
   }
 
@@ -249,7 +249,7 @@ void TCPIngress::try_connect()
       case EAGAIN:
         /* We have initiated a non-blocking connect.  Get notified when
            the connection can be resolved. */
-        fdev.set(sock, EPOLLOUT);
+        fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
         return;
       }
     }
@@ -257,7 +257,7 @@ void TCPIngress::try_connect()
     /* We're immediately connected, so record that, and check when we
        can actually write. */
     connected = true;
-    fdev.set(sock, EPOLLOUT);
+    fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
     return;
   } while (true);
 }
@@ -268,7 +268,7 @@ void TCPIngress::try_send()
   assert(connected);
   if (!upout_ready) {
     /* We are not ready to send, so ask when we can. */
-    fdev.set(sock, EPOLLOUT);
+    fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
     return;
   }
 
@@ -296,7 +296,7 @@ void TCPIngress::try_send()
           /* We can't send any more.  Tell the source we're blocked.
              Ensure we're told when we can send some more. */
           src.consumed(0);
-          fdev.set(sock, EPOLLOUT);
+          fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
           log.debug([this](auto &out) {
             out << "sendmsg(" << sock << ") block on "
                 << to_str(ainf->ai_addr, ainf->ai_addrlen);
