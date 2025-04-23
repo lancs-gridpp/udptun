@@ -98,7 +98,11 @@ void TCPIngress::descriptor_ready(uint32_t evs)
       return;
     }
 
-    /* Discard the socket, and try again in a while. */
+    /* The peer closed the connection some time after it succeeded.
+       Discard the socket, and try again in a while. */
+    log.warn([this](auto &out) {
+      out << "peer closed: " << to_str(ainf->ai_addr, ainf->ai_addrlen);
+    });
     clear_socket();
     rstev.set(std::chrono::seconds(30));
     return;
@@ -115,7 +119,7 @@ void TCPIngress::descriptor_ready(uint32_t evs)
       throw std::system_error(errno, std::system_category(),
                               "getsockopt(SOL_SOCKET, SO_ERROR)");
     if (soerr != 0) {
-      log.error([this, soerr](auto &out) {
+      log.debug([this, soerr](auto &out) {
         out << "conn failed: " << soerr << " (" << ::strerror(soerr)
             << ") on " << to_str(ainf->ai_addr, ainf->ai_addrlen);
       });
@@ -226,6 +230,7 @@ void TCPIngress::try_connect()
     if (sock < 0) {
       assert(!ainf);
       /* We failed to open a socket.  Try again in a bit. */
+      log.warn("unconnected; retry later");
       rstev.set(std::chrono::seconds(30));
       return;
     }
