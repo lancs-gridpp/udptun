@@ -186,7 +186,9 @@ void TCPIngress::try_connect()
   do {
     /* Create the socket with the right parameters. */
     struct addrinfo *bind_curr = nullptr;
-    while (ainf) {
+    for ( ; ainf; ainf = ainf->ai_next) {
+      if (ainf->ai_family == AF_INET && !ipv4) continue;
+      if (ainf->ai_family == AF_INET6 && !ipv6) continue;
       /* Find a bind address matching by family and protocol. */
       for (bind_curr = bind_info; bind_curr &&
              (bind_curr->ai_family != ainf->ai_family ||
@@ -204,7 +206,6 @@ void TCPIngress::try_connect()
               << to_str(ainf->ai_addr, ainf->ai_addrlen);
         });
       }
-      ainf = ainf->ai_next;
     }
 
     if (sock < 0) {
