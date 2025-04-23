@@ -79,11 +79,19 @@ void TCPIngress::descriptor_ready(uint32_t evs)
 {
   assert(sock >= 0);
   if (evs & (EPOLLHUP | EPOLLRDHUP)) {
-    /* The peer closed the connection.  Discard the socket, and try
-       again in a while. */
-    log.debug([this](auto &out) {
-      out << "peer closed: " << to_str(ainf->ai_addr, ainf->ai_addrlen);
-    });
+    if (!connected) {
+      /* The connection failed. */
+      log.debug([this](auto &out) {
+        out << "connect failed: " << to_str(ainf->ai_addr, ainf->ai_addrlen);
+      });
+    } else {
+      /* The peer closed the connection. */
+      log.debug([this](auto &out) {
+        out << "peer closed: " << to_str(ainf->ai_addr, ainf->ai_addrlen);
+      });
+    }
+
+    /* Discard the socket, and try again in a while. */
     clear_socket();
     rstev.set(std::chrono::seconds(30));
     return;
