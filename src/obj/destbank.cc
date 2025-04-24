@@ -89,3 +89,9 @@ std::shared_ptr<Destination> DestinationBank::seek(const std::string &name,
 
   return pos->second[salt % pos->second.size()];
 }
+
+bool DestinationBank::missing(const std::string &name)
+{
+  auto pos = tab.find(name);
+  return pos == tab.end();
+}

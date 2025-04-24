@@ -54,6 +54,7 @@ public:
   void load(const YAML::Node &singletons, const YAML::Node &groups);
 
   std::shared_ptr<Destination> seek(const std::string &name, unsigned salt);
+  bool missing(const std::string &name);
 };
 
 #endif

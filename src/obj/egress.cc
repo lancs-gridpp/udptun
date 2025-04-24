@@ -38,6 +38,7 @@
 #include "messages.hh"
 #include "tcp_egress.hh"
 #include "formatting.hh"
+#include "destbank.hh"
 
 void Egress::activate() { }
 
@@ -56,8 +57,13 @@ Egress *make_egress(Scheduler &sched,
     for (auto iter = chroot.begin(); iter != chroot.end(); iter++) {
       auto label = iter->first.as<label_t>();
       for (auto niter = iter->second.begin();
-           niter != iter->second.end(); niter++)
-        channels[label].insert(niter->as<std::string>());
+           niter != iter->second.end(); niter++) {
+        auto name = niter->as<std::string>();
+        if (dests.missing(name))
+          throw std::runtime_error(sformat("unknown destination %s referenced"
+                                           " by egress %s", name, egress_name));
+        channels[label].insert(name);
+      }
     }
   }
 
