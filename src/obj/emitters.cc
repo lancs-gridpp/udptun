@@ -54,6 +54,7 @@
 #include "network.hh"
 #include "emitters.hh"
 #include "destinations.hh"
+#include "payloads.hh"
 
 EmitterMaker::EmitterMaker(destination_set_t &required)
   : required(required), info(nullptr), chosen(nullptr), sock(-1)
@@ -125,7 +126,8 @@ void EmitterMaker::make(const std::string &name,
   if (sock < 0) return;
 
   std::shared_ptr<Emitter> r =
-    std::shared_ptr<Emitter>(new Emitter(name, sock,
+    std::shared_ptr<Emitter>(new Emitter(name, chosen->ai_addr,
+                                         chosen->ai_addrlen, sock,
                                          chosen->ai_family, chosen->ai_protocol));
   sock = -1;
 
@@ -139,11 +141,11 @@ void EmitterMaker::make(const std::string &name,
 
 
 
-Emitter::Emitter(const std::string &name,
-                 int sock, int family, int protocol)
+Emitter::Emitter(const std::string &name, const struct sockaddr *addr,
+                 socklen_t addrlen, int sock, int family, int protocol)
   : name(name),
     log("udptun.egress.emitter", std::string("emitter:") + name),
-    sock(sock), family(family), protocol(protocol) { }
+    sock(sock), family(family), protocol(protocol), addr(addr, addrlen) { }
 
 int Emitter::send(const unsigned char *buf, size_t len,
                   Destination &dst, int flags)
@@ -156,6 +158,10 @@ int Emitter::send(const unsigned char *buf, size_t len,
 
   assert(sock >= 0);
   auto rc = dst.send(family, protocol, sock, buf, len, flags);
+  log.detail([rc, this, buf, len](auto &out) {
+    out << "sent from " << addr.str() << ": ";
+    Payload::describe(out, buf, len);
+  });
 
   /* Standardize the returned error code. */
   if (rc == EWOULDBLOCK || rc == EAGAIN)

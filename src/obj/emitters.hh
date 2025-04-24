@@ -46,6 +46,7 @@
 
 #include "logger.hh"
 #include "descriptor.hh"
+#include "sockaddrs.hh"
 
 class Destination;
 
@@ -79,8 +80,9 @@ private:
   Logger log;
   int sock;
   const int family, protocol;
+  SocketAddress addr;
 
-  Emitter(const std::string &name,
+  Emitter(const std::string &name, const struct sockaddr *, socklen_t,
           int sock, int family, int protocol);
 
 public:
