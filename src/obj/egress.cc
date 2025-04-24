@@ -61,7 +61,8 @@ Egress *make_egress(Scheduler &sched,
         auto name = niter->as<std::string>();
         if (dests.missing(name))
           throw std::runtime_error(sformat("unknown destination %s referenced"
-                                           " by egress %s", name, egress_name));
+                                           " by egress %s", name.c_str(),
+                                           egress_name.c_str()));
         channels[label].insert(name);
       }
     }
