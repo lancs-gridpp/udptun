@@ -193,6 +193,12 @@ TCPEgress::Connection::ClientState::ClientState(const std::string &ename,
     auto &dnames = ent.second;
     for (auto &dname : dnames) {
       std::shared_ptr<Destination> dest = dbank.seek(dname, salt);
+      if (!dest) {
+        log.error([&dname](auto &out) {
+          out << "unknown name " << dname;
+        });
+        continue;
+      }
       required_dests.insert(dest);
       dest_names[dest] = dname;
       name_dests[dname] = dest;
@@ -223,7 +229,9 @@ TCPEgress::Connection::ClientState::ClientState(const std::string &ename,
     auto &dnames = ent.second;
     for (auto &dname : dnames) {
       std::shared_ptr<Destination> dest = name_dests[dname];
+      if (!dest) continue;
       std::shared_ptr<Emitter> em = dest_em[dest];
+      if (!em) continue;
       outlets[label][dest] = em;
     }
   }
