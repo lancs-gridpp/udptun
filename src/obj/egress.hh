@@ -57,6 +57,8 @@ class PeerTable;
 
 struct Egress {
   virtual void activate();
+  virtual void deactivate();
+  virtual bool busy();
   virtual ~Egress() = default;
 };
 

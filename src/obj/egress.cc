@@ -42,6 +42,10 @@
 
 void Egress::activate() { }
 
+void Egress::deactivate() { }
+
+bool Egress::busy() { return false; }
+
 Egress *make_egress(Scheduler &sched,
                     const std::string &egress_name,
                     DestinationBank &dests,

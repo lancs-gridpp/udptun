@@ -428,3 +428,21 @@ void TCPEgress::activate()
     listeners.emplace_back(*this, sock);
   }
 }
+
+bool TCPEgress::busy()
+{
+  flush();
+  return !conns.empty();
+}
+
+void TCPEgress::deactivate()
+{
+  for (auto &conn : conns)
+    conn.deactivate();
+}
+
+void TCPEgress::Connection::deactivate()
+{
+  if (sock >= 0)
+    ::shutdown(sock, SHUT_WR);
+}

@@ -112,6 +112,7 @@ class TCPEgress : public Egress {
   public:
     Connection(TCPEgress &, const std::string &name, int sock,
                const struct sockaddr *, socklen_t);
+    void deactivate();
     ~Connection();
   };
   friend class Connection;
@@ -137,6 +138,8 @@ public:
             const channelmap_t &channels,
             const YAML::Node &cfg);
   void activate();
+  void deactivate();
+  bool busy();
 };
 
 #endif

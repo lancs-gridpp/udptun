@@ -184,7 +184,7 @@ static int trapped_main(Logger &log, Config &config)
   Quota quota;
 
   bool more;
-  IdleEvent idle(sched, [&more]() { more = false; });
+  IdleEvent idle(sched, [&idle]() { idle.set(); });
   idle.prio(10);
   TimedEvent quit_timeout(sched, [&more]() { more = false; });
 
@@ -349,24 +349,39 @@ static int trapped_main(Logger &log, Config &config)
 
     log.info("polling");
     more = true;
+    bool awaiting_idle = false;
     while (more) {
       sched.poll();
 
-      /* If we've received SIGHUP, exit this loop as soon as we're
-         idle. */
-      if (reload) {
-        log.info("reload detected");
-        reload = false;
-        idle.set();
+      if (awaiting_idle) {
+        bool quiet = true;
+        for (auto &egress : egress_index)
+          if (egress.second->busy()) {
+            quiet = false;
+            break;
+          }
+        if (quiet)
+          more = false;
       }
 
-      /* If we've received SIGINT or SIGTERM, exit this loop as soon
-         as we're idle.  Set a timer so we will quit anyway after a
-         short time. */
-      if (quit && !quit_timeout) {
-        log.info("quit detected");
-        idle.set();
-        quit_timeout.set(std::chrono::seconds(10));
+      if (quit) {
+        /* If we've received SIGINT or SIGTERM, exit this loop as soon
+           as we're idle.  Set a timer so we will quit anyway after a
+           short time. */
+        if (!quit_timeout) {
+          log.info("quit detected");
+          awaiting_idle = true;
+          quit_timeout.set(std::chrono::seconds(10));
+        }
+      } else if (reload) {
+        /* If we've received SIGHUP, exit this loop as soon as we're
+           idle. */
+        log.info("reload detected");
+        for (auto &egress : egress_index)
+          egress.second->deactivate();
+        reload = false;
+        awaiting_idle = true;
+        quit_timeout.set(std::chrono::seconds(1));
       }
     }
   }
