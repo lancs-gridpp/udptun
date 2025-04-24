@@ -55,7 +55,7 @@ TCPIngress::TCPIngress(const std::string &name,
     ipv4(cfg["ipv4"].as<bool>("true")),
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
-    bind_host(cfg["bind_host"].as<std::string>("localhost")),
+    bind_host(cfg["bind_host"].as<std::string>("")),
     srv(cfg["port"].as<std::string>()),
     bind_srv(cfg["bind_port"].as<std::string>("0")),
     sock(-1), connected(false), upout_ready(false),
@@ -189,7 +189,7 @@ void TCPIngress::try_connect()
   LegacyDestructor infoDestr([&info = bind_info]() {
     if (info) freeaddrinfo(info);
   });
-  {
+  if (!bind_host.empty()) {
     log.info("looking for bind address");
     struct addrinfo hints;
     memset(&hints, 0, sizeof hints);
@@ -197,8 +197,7 @@ void TCPIngress::try_connect()
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
     hints.ai_protocol = 0;
-    get_address_info(bind_info, bind_host.empty() ? nullptr : bind_host.c_str(),
-                     bind_srv.c_str(), &hints,
+    get_address_info(bind_info, bind_host.c_str(), bind_srv.c_str(), &hints,
                      sformat("egress:%s", name.c_str()).c_str());
   }
 
@@ -214,7 +213,7 @@ void TCPIngress::try_connect()
               bind_curr->ai_protocol != ainf->ai_protocol);
            bind_curr = bind_curr->ai_next)
         ;
-      if (bind_curr) {
+      if (bind_host.empty() || bind_curr) {
         /* Try to create a socket. */
         sock = socket(ainf->ai_family, SOCK_STREAM, ainf->ai_protocol);
         if (sock >= 0)
@@ -236,7 +235,8 @@ void TCPIngress::try_connect()
     }
 
     /* Try to bind the socket before connecting. */
-    if (::bind(sock, bind_curr->ai_addr, bind_curr->ai_addrlen) != 0) {
+    if (bind_curr &&
+        ::bind(sock, bind_curr->ai_addr, bind_curr->ai_addrlen) != 0) {
       clear_socket();
       continue;
     }
@@ -258,10 +258,12 @@ void TCPIngress::try_connect()
       int ec = errno;
       switch (ec) {
       default:
-        log.warn([this, ec](auto &out) {
+        log.warn([this, bind_curr, ec](auto &out) {
           out << sock << " failed to connect to "
-              << to_str(ainf->ai_addr, ainf->ai_addrlen)
-              << ": " << ec << " (" << strerror(ec) << ")";
+              << to_str(ainf->ai_addr, ainf->ai_addrlen);
+          if (bind_curr)
+            out << " from " << to_str(bind_curr->ai_addr, bind_curr->ai_addrlen);
+          out << ": " << ec << " (" << strerror(ec) << ")";
         });
 
         /* Close the socket, and try the next address entry
