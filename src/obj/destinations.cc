@@ -63,7 +63,11 @@ Destination::Destination(const std::string &name, const YAML::Node &cfg)
 void Destination::activate()
 {
   if (activated) return;
-  log.debug("activating");
+  log.debug([this](auto &out) {
+    out << "activating on " << host << ":" << srv;
+    if (ipv4) out << ";ipv4";
+    if (ipv6) out << ";ipv6";
+  });
 
   /* Restrict what we're looking for. */
   struct addrinfo hints;
