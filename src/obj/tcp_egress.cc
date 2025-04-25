@@ -303,7 +303,6 @@ void TCPEgress::Connection::handle_fd(uint32_t)
   ssize_t rc = recv(sock, buf + len, sizeof buf - len, 0);
   if (rc <= 0) {
     /* The client has closed the connection, or it has timed out. */
-    // TODO: Log the error if rc < 0.
     if (rc == 0) {
       log.trace([this](auto &out) {
         out << name << ": client closed";
