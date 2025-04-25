@@ -45,10 +45,15 @@
 
 class Config {
   std::vector<std::string> source_files;
+  bool ingress_, egress_;
+  bool error_;
 
 public:
-  Config(const std::vector<std::string> &source_files);
+  Config(const std::vector<std::string> &);
   YAML::Node get();
+  bool ingress() { return ingress_; }
+  bool egress() { return egress_; }
+  operator bool() { return !error_; }
 };
 
 #endif

@@ -103,8 +103,8 @@ static int trapped_main(Logger &, Config &);
 int main(int argc, const char *const *argv)
 {
   Logger log("udptun.main", "main");
-  /* Arguments are just filename configurations. */
   Config config({argv, argv + argc});
+  if (!config) return EXIT_FAILURE;
 
   try {
     /* Block a bunch of signals.  These should include the ones we
@@ -253,7 +253,7 @@ static int trapped_main(Logger &log, Config &config)
     std::map<std::string, std::shared_ptr<Egress>> egress_index;
     std::map<std::string, std::shared_ptr<Absorber>> absorber_index;
     {
-      if (root["ingress"]) {
+      if (config.ingress() && root["ingress"]) {
         const auto &ingress_root = root["ingress"];
 
         /* Create an index of named tunnel egresses.  Each will
@@ -310,7 +310,7 @@ static int trapped_main(Logger &log, Config &config)
                            });
       }
 
-      if (root["egress"]) {
+      if (config.egress() && root["egress"]) {
         const auto &egress_root = root["egress"];
         dbank.load(egress_root["destinations"],
                    egress_root["groups"]);

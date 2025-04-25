@@ -34,7 +34,10 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <cstring>
+
 #include <fstream>
+#include <iostream>
 
 #include <yaml-cpp/yaml.h>
 
@@ -67,8 +70,33 @@ static void merge(YAML::Node &dst, const YAML::Node &src)
   }
 }
 
-Config::Config(const std::vector<std::string> &source_files)
-  : source_files(source_files) { }
+Config::Config(const std::vector<std::string> &args)
+  : ingress_(true), egress_(true), error_(false)
+{
+  bool switches = true;
+  for (auto iter = args.begin() + 1; iter != args.end(); iter++) {
+    if (switches) {
+      if (*iter == "--no-ingress") {
+        ingress_ = false;
+        continue;
+      }
+      if (*iter == "--no-egress") {
+        egress_ = false;
+        continue;
+      }
+      if (*iter == "--") {
+        switches = false;
+        continue;
+      }
+      if (!iter->empty() && ::strchr("-+", (*iter)[0])) {
+        error_ = true;
+        std::cerr << args[0] << ": unknown switch: " << *iter << std::endl;
+        break;
+      }
+    }
+    source_files.push_back(*iter);
+  }
+}
 
 YAML::Node Config::get()
 {
