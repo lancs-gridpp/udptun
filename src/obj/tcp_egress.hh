@@ -50,6 +50,7 @@
 #include "egress.hh"
 #include "descriptor.hh"
 #include "idle.hh"
+#include "timed.hh"
 #include "messages.hh"
 #include "sockaddrs.hh"
 #include "peers.hh"
@@ -64,12 +65,19 @@ class TCPEgress : public Egress {
   class Listener {
     friend TCPEgress;
     TCPEgress &parent;
+    int family, protocol;
+    SocketAddress addr;
     int sock;
     void handle_fd(uint32_t);
     DescriptorEvent fdev;
+    void rebind();
+    TimedEvent rbev;
 
   public:
-    Listener(TCPEgress &, int sock);
+    Listener(TCPEgress &, int family, int protocol,
+             const struct sockaddr *, socklen_t);
+    bool flushable();
+    void activate();
     ~Listener();
   };
   friend class Listener;
@@ -113,6 +121,7 @@ class TCPEgress : public Egress {
     Connection(TCPEgress &, const std::string &name, int sock,
                const struct sockaddr *, socklen_t);
     void deactivate();
+    bool flushable();
     ~Connection();
   };
   friend class Connection;

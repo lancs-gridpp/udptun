@@ -70,7 +70,8 @@ void TCPEgress::Listener::handle_fd(uint32_t)
     socklen_t addrlen = sizeof space;
     int clsock = ::accept(sock, &space.addr, &addrlen);
     if (clsock < 0) {
-      switch (errno) {
+      int ec = errno;
+      switch (ec) {
       case ENETDOWN:
       case EPROTO:
       case ENOPROTOOPT:
@@ -89,9 +90,12 @@ void TCPEgress::Listener::handle_fd(uint32_t)
 
       default:
         fdev.cancel();
-        close(sock);
-        sock = -1;
-        // TODO: Maybe throw something, or at least log.
+        close(sock), sock = -1;
+        parent.log.warn([this, ec](auto &out) {
+          out << "accept() for " << addr.str() << " => "
+              << ec << " (" << strerror(ec) << ")";
+        });
+        rbev.set(std::chrono::seconds(30));
         return;
       }
     }
@@ -130,21 +134,94 @@ void TCPEgress::Listener::handle_fd(uint32_t)
   } while (true);
 }
 
-TCPEgress::Listener::Listener(TCPEgress &parent, int sock)
-  : parent(parent), sock(sock),
-    fdev(parent.sched,
-         std::bind(&Listener::handle_fd, this, std::placeholders::_1))
+void TCPEgress::Listener::activate()
 {
+  if (sock < 0) rebind();
+}
+
+void TCPEgress::Listener::rebind()
+{
+  parent.log.debug([this](auto &out) {
+    out << "starting " << addr.str();
+  });
+
+  /* Try creating a socket of the right type. */
+  assert(sock < 0);
+  sock = ::socket(family, SOCK_STREAM, protocol);
+  if (sock < 0) {
+    int ec = errno;
+    /* Socket creation failed.  Log the error, and try again later. */
+    parent.log.warn([this, ec](auto &out) {
+      out << "socket(" << af_to_str(family) << ", STREAM"
+          << proto_to_str(protocol) << ") for " << addr.str()
+          << " => " << ec << " (" << strerror(ec) << ")";
+    });
+    assert(sock < 0);
+    rbev.set(std::chrono::seconds(30));
+    return;
+  }
+
+  /* Socket creation was successful.  Try binding it. */
+  if (::bind(sock, addr.addr(), addr.len()) != 0) {
+    /* Binding failed.  Close the socket, log the error, and try
+       again. */
+    int ec = errno;
+    ::close(sock), sock = -1;
+    parent.log.warn([this, ec](auto &out) {
+      out << "bind(" << addr.str() << ") => "
+          << ec << " (" << strerror(ec) << ")";
+    });
+    assert(sock < 0);
+    rbev.set(std::chrono::seconds(65));
+    return;
+  }
+
+  /* Make the socket accept connections. */
+  if (::listen(sock, 5) != 0) {
+    /* Accepting connections failed.  Close the socket, log the error,
+       and try again later. */
+    int ec = errno;
+    ::close(sock), sock = -1;
+    parent.log.warn([this, ec](auto &out) {
+      out << "listen() for " << addr.str() << " => "
+          << ec << " (" << strerror(ec) << ")";
+    });
+    assert(sock < 0);
+    rbev.set(std::chrono::seconds(30));
+    return;
+  }
+
+  /* Socket is ready.  Make sure we are notified when accept() can be
+     called on it. */
+  assert(sock >= 0);
+  rbev.cancel();
   fdev.set(sock, EPOLLIN);
+  parent.log.debug([this](auto &out) {
+    out << addr.str() << " ready sock=" << sock;
+  });
+}
+
+TCPEgress::Listener::Listener(TCPEgress &parent, int family, int protocol,
+                              const struct sockaddr *addr, socklen_t addrlen)
+  : parent(parent), family(family), protocol(protocol),
+    addr(addr, addrlen), sock(-1),
+    fdev(parent.sched,
+         std::bind(&Listener::handle_fd, this, std::placeholders::_1)),
+    rbev(parent.sched, std::bind(&Listener::rebind, this))
+{
   fdev.name(sformat("egress:%s:listen:%d", parent.name.c_str(), sock));
 }
 
 TCPEgress::Listener::~Listener()
 {
   /* Cancel any outstanding expectation before closing the socket. */
-  fdev.cancel();
-  if (sock >= 0)
+  if (sock >= 0) {
+    parent.log.debug([this](auto &out) {
+      out << addr.str() << " destroyed sock=" << sock;
+    });
+    fdev.cancel();
     close(sock);
+  }
 }
 
 TCPEgress::Connection::Connection(TCPEgress &parent,
@@ -315,8 +392,7 @@ void TCPEgress::Connection::handle_fd(uint32_t)
       });
     }
     fdev.cancel();
-    close(sock);
-    sock = -1;
+    close(sock), sock = -1;
 
     /* Make sure this entry gets cleaned out. */
     parent.idev.set();
@@ -356,10 +432,24 @@ TCPEgress::TCPEgress(const std::string &name,
     channels(channels), dbank(dbank),
     peers(&peers) { }
 
+bool TCPEgress::Connection::flushable()
+{
+  return sock < 0;
+}
+
+bool TCPEgress::Listener::flushable()
+{
+  return sock < 0 && !rbev;
+}
+
 void TCPEgress::flush()
 {
   /* Go through all connections, deleting those which are closed. */
-  conns.remove_if([](Connection &c) { return c.sock < 0; });
+  conns.remove_if([](Connection &c) { return c.flushable(); });
+
+  /* Go through all listeners, deleting those which are closed and are
+     not expected to re-open. */
+  listeners.remove_if([](Listener &c) { return c.flushable(); });
 }
 
 void TCPEgress::activate()
@@ -391,54 +481,24 @@ void TCPEgress::activate()
     });
   }
 
-  for (auto iter = addrs.begin(); iter != addrs.end(); iter++) {
-    log.debug([this, &iter](std::ostream &out) {
-      out << "creating " << std::string(*iter);
-    });
-    int sock = socket(iter->family, SOCK_STREAM, iter->protocol);
-    if (sock < 0)
-      throw std::system_error(errno, std::system_category(),
-                              sformat("socket(%s, SOCK_STREAM, %s) for %s",
-                                      af_to_str(iter->family),
-                                      proto_to_str(iter->protocol),
-                                      to_str(iter->addr(),
-                                             iter->addrlen).c_str()));
-
-    log.detail("binding");
-    if (bind(sock, iter->addr(), iter->addrlen) != 0) {
-      int ec = errno;
-      close(sock);
-      throw std::system_error(ec, std::system_category(),
-                              sformat("bind(%s)",
-                                      to_str(iter->addr(),
-                                             iter->addrlen).c_str()));
-    }
-
-    log.detail("listening");
-    if (listen(sock, 5) != 0) {
-      int ec = errno;
-      close(sock);
-      throw std::system_error(ec, std::system_category(),
-                              sformat("listen %s %s %s",
-                                      af_to_str(iter->family),
-                                      proto_to_str(iter->protocol),
-                                      to_str(iter->addr(),
-                                             iter->addrlen).c_str()));
-    }
-
-    assert(sock >= 0);
-    listeners.emplace_back(*this, sock);
-  }
+  for (auto iter = addrs.begin(); iter != addrs.end(); iter++)
+    listeners.emplace_back(*this, iter->family, iter->protocol,
+                           iter->addr(), iter->addrlen).activate();
 }
 
 bool TCPEgress::busy()
 {
+  log.debug("flush");
   flush();
   return !conns.empty();
 }
 
 void TCPEgress::deactivate()
 {
+  /* Stop listening for new connections. */
+  listeners.clear();
+
+  /* Tell existing connections to shutdown(WR). */
   for (auto &conn : conns)
     conn.deactivate();
 }
@@ -447,9 +507,10 @@ void TCPEgress::Connection::deactivate()
 {
   if (sock >= 0) {
     parent.log.debug([this](auto &out) {
-      out << name << ": shutdown(WR)";
+      out << name << ": telling client to stop";
     });
 
-    ::shutdown(sock, SHUT_WR);
+    unsigned char b = 0;
+    ::send(sock, &b, sizeof b, 0);
   }
 }

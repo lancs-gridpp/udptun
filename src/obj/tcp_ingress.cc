@@ -78,7 +78,7 @@ TCPIngress::~TCPIngress()
 void TCPIngress::descriptor_ready(uint32_t evs)
 {
   assert(sock >= 0);
-  if (evs & (EPOLLHUP | EPOLLRDHUP)) {
+  if (evs & (EPOLLHUP | EPOLLRDHUP | EPOLLIN)) {
     if (!connected) {
       /* The connection failed.  Why?  Try the next entry. */
       int soerr;
@@ -98,6 +98,14 @@ void TCPIngress::descriptor_ready(uint32_t evs)
       return;
     }
 
+    /* Anything from the egress is treated as a graceful shutdown.
+       Consume the bytes, so the server doesn't get ECONNRESET.
+       (There should only be one.)*/
+    if (evs & EPOLLIN) {
+      unsigned char buf[100];
+      ::recv(sock, buf, sizeof buf, 0);
+    }
+
     /* The peer closed the connection some time after it succeeded.
        Discard the socket, and try again in a while. */
     log.warn([this, evs](auto &out) {
@@ -105,7 +113,7 @@ void TCPIngress::descriptor_ready(uint32_t evs)
       epoll_event_out(out, evs);
     });
     clear_socket();
-    rstev.set(std::chrono::seconds(30));
+    rstev.set(std::chrono::seconds(33));
     return;
   }
 
@@ -136,7 +144,7 @@ void TCPIngress::descriptor_ready(uint32_t evs)
       out << "connected " << to_str(ainf->ai_addr, ainf->ai_addrlen);
     });
     connected = true;
-    fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
+    fdev.set(sock, EPOLLOUT | EPOLLRDHUP | EPOLLIN);
     return;
   }
 
@@ -234,7 +242,7 @@ void TCPIngress::try_connect()
       assert(!ainf);
       /* We failed to open a socket.  Try again in a bit. */
       log.warn("unconnected; retry later");
-      rstev.set(std::chrono::seconds(30));
+      rstev.set(std::chrono::seconds(33));
       return;
     }
 
@@ -296,7 +304,7 @@ void TCPIngress::try_connect()
           << to_str(ainf->ai_addr, ainf->ai_addrlen);
     });
     connected = true;
-    fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
+    fdev.set(sock, EPOLLOUT | EPOLLRDHUP | EPOLLIN);
     return;
   } while (true);
 }
@@ -307,7 +315,7 @@ void TCPIngress::try_send()
   assert(connected);
   if (!upout_ready) {
     /* We are not ready to send, so ask when we can. */
-    fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
+    fdev.set(sock, EPOLLOUT | EPOLLRDHUP | EPOLLIN);
     return;
   }
 
@@ -335,7 +343,7 @@ void TCPIngress::try_send()
           /* We can't send any more.  Tell the source we're blocked.
              Ensure we're told when we can send some more. */
           src.consumed(0);
-          fdev.set(sock, EPOLLOUT | EPOLLRDHUP);
+          fdev.set(sock, EPOLLOUT | EPOLLRDHUP | EPOLLIN);
           log.debug([this](auto &out) {
             out << "sendmsg(" << sock << ") block on "
                 << to_str(ainf->ai_addr, ainf->ai_addrlen);
