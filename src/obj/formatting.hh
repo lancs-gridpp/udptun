@@ -39,6 +39,7 @@
 
 #include <cstdint>
 
+#include <ostream>
 #include <string>
 #include <stdexcept>
 #include <memory>
@@ -55,5 +56,6 @@ std::string sformat(const std::string &fmt, Args... args)
 }
 
 std::string epoll_event_str(uint32_t events);
+void epoll_event_out(std::ostream &, uint32_t events);
 
 #endif

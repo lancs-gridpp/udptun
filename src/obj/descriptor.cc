@@ -45,9 +45,8 @@
 #include "descriptor.hh"
 #include "scheduling.hh"
 
-std::string epoll_event_str(uint32_t events)
+void epoll_event_out(std::ostream &out, uint32_t events)
 {
-  std::stringstream out;
   if (events & EPOLLIN) out << " IN";
   if (events & EPOLLOUT) out << " OUT";
   if (events & EPOLLRDHUP) out << " RDHUP";
@@ -58,6 +57,12 @@ std::string epoll_event_str(uint32_t events)
   if (events & EPOLLONESHOT) out << " ONESHOT";
   if (events & EPOLLWAKEUP) out << " WAKEUP";
   if (events & EPOLLEXCLUSIVE) out << " EXCLUSIVE";
+}
+
+std::string epoll_event_str(uint32_t events)
+{
+  std::stringstream out;
+  epoll_event_out(out, events);
   return out.str();
 }
 
