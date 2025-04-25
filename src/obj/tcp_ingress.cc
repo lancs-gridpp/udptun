@@ -100,8 +100,9 @@ void TCPIngress::descriptor_ready(uint32_t evs)
 
     /* The peer closed the connection some time after it succeeded.
        Discard the socket, and try again in a while. */
-    log.warn([this](auto &out) {
+    log.warn([this, evs](auto &out) {
       out << "peer closed: " << to_str(ainf->ai_addr, ainf->ai_addrlen);
+      epoll_event_out(out, evs);
     });
     clear_socket();
     rstev.set(std::chrono::seconds(30));
@@ -151,6 +152,9 @@ void TCPIngress::clear_socket()
      invalid, so we don't close it again (as it might belong to
      someone else by then). */
   fdev.cancel();
+  log.debug([this](auto &out) {
+    out << "close(" << sock << ")";
+  });
   ::close(sock), sock = -1;
 }
 

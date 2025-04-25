@@ -378,6 +378,9 @@ void TCPEgress::activate()
   struct addrinfo *info = nullptr;
   get_address_info(info, host.c_str(), srv.c_str(),
                    &hints, sformat("egress:%s", name.c_str()).c_str());
+  log.detail([this](auto &out) {
+    out << "gai(" << host << ":" << srv << ")";
+  });
 
   std::set<AddressEntry> addrs;
   for (auto iter = info; iter; iter = iter->ai_next) {
@@ -442,6 +445,11 @@ void TCPEgress::deactivate()
 
 void TCPEgress::Connection::deactivate()
 {
-  if (sock >= 0)
+  if (sock >= 0) {
+    parent.log.debug([this](auto &out) {
+      out << name << ": shutdown(WR)";
+    });
+
     ::shutdown(sock, SHUT_WR);
+  }
 }
