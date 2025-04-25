@@ -375,12 +375,12 @@ static int trapped_main(Logger &log, Config &config)
       if (awaiting_idle) {
         bool quiet = true;
         for (auto &egress : egress_index)
-          if (egress.second->busy()) {
+          if (egress.second->busy())
             quiet = false;
-            break;
-          }
-        if (quiet)
+        if (quiet) {
           more = false;
+          log.debug("idleness achieved");
+        }
       }
     }
   }
