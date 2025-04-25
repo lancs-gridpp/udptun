@@ -346,6 +346,7 @@ static int trapped_main(Logger &log, Config &config)
     log.info("polling");
     more = true;
     bool awaiting_idle = false;
+    quit_timeout.cancel();
     while (more) {
       sched.poll();
 
