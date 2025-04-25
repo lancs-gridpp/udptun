@@ -352,7 +352,7 @@ TCPEgress::TCPEgress(const std::string &name,
     ipv4(cfg["ipv4"].as<bool>("true")),
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
-    srv(cfg["port"].as<std::string>()),
+    srv(cfg["port"].as<std::string>("9999")),
     channels(channels), dbank(dbank),
     peers(&peers) { }
 
@@ -376,7 +376,7 @@ void TCPEgress::activate()
 
   /* Resolve the host. */
   struct addrinfo *info = nullptr;
-  get_address_info(info, host.c_str(), srv.empty() ? nullptr : srv.c_str(),
+  get_address_info(info, host.c_str(), srv.c_str(),
                    &hints, sformat("egress:%s", name.c_str()).c_str());
 
   std::set<AddressEntry> addrs;
