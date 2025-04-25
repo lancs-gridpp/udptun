@@ -355,6 +355,8 @@ static int trapped_main(Logger &log, Config &config)
            short time. */
         if (!quit_timeout) {
           log.info("quit detected");
+          for (auto &egress : egress_index)
+            egress.second->deactivate();
           awaiting_idle = true;
           quit_timeout.set(std::chrono::seconds(10));
         }
