@@ -104,11 +104,7 @@ int main(int argc, const char *const *argv)
 {
   Logger log("udptun.main", "main");
   /* Arguments are just filename configurations. */
-  std::vector<std::string> config_filenames;
-  config_filenames.reserve(argc - 1);
-  for (int i = 1; i < argc; i++)
-    config_filenames.push_back(argv[i]);
-  Config config(config_filenames);
+  Config config({argv, argv + argc});
 
   try {
     /* Block a bunch of signals.  These should include the ones we
