@@ -349,17 +349,6 @@ static int trapped_main(Logger &log, Config &config)
     while (more) {
       sched.poll();
 
-      if (awaiting_idle) {
-        bool quiet = true;
-        for (auto &egress : egress_index)
-          if (egress.second->busy()) {
-            quiet = false;
-            break;
-          }
-        if (quiet)
-          more = false;
-      }
-
       if (quit) {
         /* If we've received SIGINT or SIGTERM, exit this loop as soon
            as we're idle.  Set a timer so we will quit anyway after a
@@ -378,6 +367,17 @@ static int trapped_main(Logger &log, Config &config)
         reload = false;
         awaiting_idle = true;
         quit_timeout.set(std::chrono::seconds(1));
+      }
+
+      if (awaiting_idle) {
+        bool quiet = true;
+        for (auto &egress : egress_index)
+          if (egress.second->busy()) {
+            quiet = false;
+            break;
+          }
+        if (quiet)
+          more = false;
       }
     }
   }
