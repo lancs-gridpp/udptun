@@ -48,9 +48,17 @@ void PeerTable::load(const YAML::Node &cfg)
 {
   if (!cfg) return;
   for (auto iter = cfg.begin(); iter != cfg.end(); iter++) {
+    /* We need a list of hostnames, or the entry is meaningless. */
+    const auto &lst = iter->second["hosts"];
+    if (!lst) continue;
+
     /* This is the internal name we use to identify queues. */
     auto id = iter->first.as<std::string>();
-    auto lst = iter->second;
+
+    /* Use the provided hash or compute it. */
+    unsigned hash = iter->second["hash"] ?
+      iter->second["hash"].as<unsigned>() : std::hash<std::string>{}(id);
+
     for (auto iter2 = lst.begin(); iter2 != lst.end(); iter2++) {
       /* This is the host string. */
       auto val = iter2->as<std::string>();
@@ -120,7 +128,7 @@ void PeerTable::load(const YAML::Node &cfg)
         }
 
         tab[std::make_pair(iter->ai_addr->sa_family, host)] =
-          std::make_pair(id, std::hash<std::string>{}(id));
+          std::make_pair(id, hash);
       }
     }
   }
