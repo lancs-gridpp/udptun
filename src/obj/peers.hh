@@ -47,7 +47,8 @@
 
 class PeerTable {
   PeerTable *const backup;
-  std::map<std::pair<int, std::string>, std::string> tab;
+  std::map<std::pair<int, std::string>,
+           std::pair<std::string, unsigned>> tab;
 
   bool seek_resolved(std::string &name, unsigned &hash,
                      const std::pair<int, std::string> &);

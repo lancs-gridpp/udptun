@@ -119,7 +119,8 @@ void PeerTable::load(const YAML::Node &cfg)
                                            val.c_str()));
         }
 
-        tab[std::make_pair(iter->ai_addr->sa_family, host)] = id;
+        tab[std::make_pair(iter->ai_addr->sa_family, host)] =
+          std::make_pair(id, std::hash<std::string>{}(id));
       }
     }
   }
@@ -130,7 +131,7 @@ void PeerTable::get_names(std::set<std::string> &result)
   if (backup)
     backup->get_names(result);
   for (auto &ent : tab)
-    result.insert(ent.second);
+    result.insert(ent.second.first);
 }
 
 bool PeerTable::seek(std::string &name, unsigned &hash,
@@ -193,7 +194,7 @@ bool PeerTable::seek_resolved(std::string &name, unsigned &hash,
     if (!backup) return false;
     return backup->seek_resolved(name, hash, key);
   }
-  name = pos->second;
-  hash = std::hash<std::string>{}(name);
+  name = pos->second.first;
+  hash = pos->second.second;
   return true;
 }
