@@ -82,12 +82,12 @@ void DestinationBank::load(const YAML::Node &singletons,
 }
 
 std::shared_ptr<Destination> DestinationBank::seek(const std::string &name,
-                                                   unsigned salt)
+                                                   unsigned hash)
 {
   auto pos = tab.find(name);
   if (pos == tab.end()) return nullptr;
 
-  return pos->second[salt % pos->second.size()];
+  return pos->second[hash % pos->second.size()];
 }
 
 bool DestinationBank::missing(const std::string &name)

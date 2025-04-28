@@ -53,7 +53,7 @@ public:
   void clear() { tab.clear(); }
   void load(const YAML::Node &singletons, const YAML::Node &groups);
 
-  std::shared_ptr<Destination> seek(const std::string &name, unsigned salt);
+  std::shared_ptr<Destination> seek(const std::string &name, unsigned hash);
   bool missing(const std::string &name);
 };
 

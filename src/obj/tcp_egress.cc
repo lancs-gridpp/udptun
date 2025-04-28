@@ -113,8 +113,10 @@ void TCPEgress::Listener::handle_fd(uint32_t)
       /* A connection was established.  Make sure we use it. */
       assert(clsock >= 0);
       std::string pname;
-      if (parent.peers.seek(pname, &space.addr, addrlen)) {
-        parent.conns.emplace_back(parent, pname, clsock, &space.addr, addrlen);
+      unsigned hash;
+      if (parent.peers.seek(pname, hash, &space.addr, addrlen)) {
+        parent.conns.emplace_back(parent, pname, hash,
+                                  clsock, &space.addr, addrlen);
         log.info([this, &space, addrlen](std::ostream &out) {
           out << sock << ": new peer " << to_str(&space.addr, addrlen);
         });
@@ -224,12 +226,12 @@ TCPEgress::Listener::~Listener()
   }
 }
 
-TCPEgress::Connection::Connection(TCPEgress &parent,
-                                  const std::string &name, int sock,
+TCPEgress::Connection::Connection(TCPEgress &parent, const std::string &name,
+                                  unsigned hash, int sock,
                                   const struct sockaddr *addr, socklen_t addrlen)
   : parent(parent),
     name(name),
-    salt(std::hash<std::string>{}(name)),
+    hash(hash),
     sock(sock), len(0),
     fdev(parent.sched,
          std::bind(&Connection::handle_fd, this, std::placeholders::_1)),
@@ -252,7 +254,7 @@ TCPEgress::Connection::~Connection()
 TCPEgress::Connection::ClientState::ClientState(const std::string &ename,
                                                 const std::string &pname,
                                                 clid_t clid,
-                                                unsigned salt,
+                                                unsigned hash,
                                                 channelmap_t &chmap,
                                                 DestinationBank &dbank,
                                                 Scheduler &sched)
@@ -269,7 +271,7 @@ TCPEgress::Connection::ClientState::ClientState(const std::string &ename,
   for (auto &ent : chmap) {
     auto &dnames = ent.second;
     for (auto &dname : dnames) {
-      std::shared_ptr<Destination> dest = dbank.seek(dname, salt);
+      std::shared_ptr<Destination> dest = dbank.seek(dname, hash);
       if (!dest) {
         log.error([&dname](auto &out) {
           out << "unknown name " << dname;
@@ -357,12 +359,12 @@ bool TCPEgress::Connection::process()
                                           parent.name,
                                           name,
                                           clid,
-                                          salt,
+                                          hash,
                                           parent.channels, parent.dbank,
                                           parent.sched);
   if (ins)
     parent.log.detail([this, clid](auto &out) {
-      out << name << ": new entry for " << clid << '/' << salt;
+      out << name << ": new entry for " << clid << '/' << hash;
     });
   auto &clstat = pos->second;
   clstat.deliver(label, base, pktlen);

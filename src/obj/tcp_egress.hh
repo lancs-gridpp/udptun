@@ -87,7 +87,7 @@ class TCPEgress : public Egress {
     friend TCPEgress;
     TCPEgress &parent;
     std::string name;
-    unsigned salt;
+    unsigned hash;
     int sock;
     void handle_fd(uint32_t);
     unsigned char buf[MAX_CLID_BYTES + MAX_LABEL_BYTES +
@@ -106,7 +106,7 @@ class TCPEgress : public Egress {
       ClientState(const std::string &ename,
                   const std::string &pname,
                   clid_t clid,
-                  unsigned salt, channelmap_t &, DestinationBank &, Scheduler &);
+                  unsigned hash, channelmap_t &, DestinationBank &, Scheduler &);
       void deliver(label_t, const unsigned char *, std::size_t);
       bool expired(std::chrono::system_clock::time_point epoch) {
         return last_used < epoch;
@@ -118,8 +118,8 @@ class TCPEgress : public Egress {
     bool process();
 
   public:
-    Connection(TCPEgress &, const std::string &name, int sock,
-               const struct sockaddr *, socklen_t);
+    Connection(TCPEgress &, const std::string &name, unsigned hash,
+               int sock, const struct sockaddr *, socklen_t);
     void deactivate();
     bool flushable();
     ~Connection();

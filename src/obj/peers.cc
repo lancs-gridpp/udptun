@@ -133,7 +133,7 @@ void PeerTable::get_names(std::set<std::string> &result)
     result.insert(ent.second);
 }
 
-bool PeerTable::seek(std::string &name,
+bool PeerTable::seek(std::string &name, unsigned &hash,
                      const struct sockaddr *addr, socklen_t addrlen)
 {
   char host[120], serv[120];
@@ -182,17 +182,18 @@ bool PeerTable::seek(std::string &name,
                                      to_str(addr, addrlen).c_str()));
   }
 
-  return seek_resolved(name, std::make_pair(addr->sa_family, host));
+  return seek_resolved(name, hash, std::make_pair(addr->sa_family, host));
 }
 
-bool PeerTable::seek_resolved(std::string &name,
+bool PeerTable::seek_resolved(std::string &name, unsigned &hash,
                               const std::pair<int, std::string> &key)
 {
   auto pos = tab.find(key);
   if (pos == tab.end()) {
     if (!backup) return false;
-    return backup->seek_resolved(name, key);
+    return backup->seek_resolved(name, hash, key);
   }
   name = pos->second;
+  hash = std::hash<std::string>{}(name);
   return true;
 }

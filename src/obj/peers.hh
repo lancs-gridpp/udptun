@@ -49,13 +49,15 @@ class PeerTable {
   PeerTable *const backup;
   std::map<std::pair<int, std::string>, std::string> tab;
 
-  bool seek_resolved(std::string &name, const std::pair<int, std::string> &);
+  bool seek_resolved(std::string &name, unsigned &hash,
+                     const std::pair<int, std::string> &);
 
 public:
   PeerTable(PeerTable *backup = nullptr) : backup(backup) { }
   void clear() { tab.clear(); }
   void load(const YAML::Node &);
-  bool seek(std::string &name, const struct sockaddr *, socklen_t);
+  bool seek(std::string &name, unsigned &hash,
+            const struct sockaddr *, socklen_t);
   void get_names(std::set<std::string> &);
 };
 
