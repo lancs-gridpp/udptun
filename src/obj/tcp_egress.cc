@@ -342,19 +342,25 @@ bool TCPEgress::Connection::process()
   clid_t clid;
   label_t label;
   payloadlen_t pktlen;
-  parent.log.detail([this](auto &out) {
+  parent.log.all([this](auto &out) {
     out << name << ": buffer (" << len << "):";
-    for (size_t i = 0; i < len; i++)
+    auto lim = std::max(len, size_t(20));
+    for (size_t i = 0; i < lim; i++)
       out << ' ' << sformat("%02X", buf[i]);
+    if (len > lim)
+      out << "...";
   });
   const unsigned char *base = decode_message(clid, label, pktlen, buf, len);
   if (!base) return false; // Packet is incomplete.
 
-  parent.log.detail([this, clid, label, pktlen, base](auto &out) {
+  parent.log.all([this, clid, label, pktlen, base](auto &out) {
     out << name << ": clid=" << clid << " label=" << label
         << " len=" << pktlen << " payload=";
-    for (size_t i = 0; i < pktlen; i++)
+    auto lim = std::min(payloadlen_t(20), pktlen);
+    for (size_t i = 0; i < lim; i++)
       out << ' ' << sformat("%02X", base[i]);
+    if (pktlen > lim)
+      out << "...";
   });
   auto [ pos, ins ] = clstats.try_emplace(clid,
                                           parent.name,
