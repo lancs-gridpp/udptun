@@ -143,7 +143,7 @@ void UDPAbsorber::sock_ready(uint32_t events)
   ssize_t rc = recvfrom(sock, buf, sizeof buf, 0, &space.addr, &addrlen);
   if (rc >= 0) {
     SocketAddress saddr(&space.addr, addrlen);
-    clid_t clid = cltab.seek(saddr); // as yet unused
+    clid_t clid = cltab.seek(saddr);
     for (auto cp : channels)
       cp->submit(clid, buf, rc);
   } else {
