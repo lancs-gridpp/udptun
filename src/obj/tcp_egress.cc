@@ -117,8 +117,9 @@ void TCPEgress::Listener::handle_fd(uint32_t)
       if (parent.peers.seek(pname, hash, &space.addr, addrlen)) {
         parent.conns.emplace_back(parent, pname, hash,
                                   clsock, &space.addr, addrlen);
-        log.info([this, &space, addrlen](std::ostream &out) {
-          out << sock << ": new peer " << to_str(&space.addr, addrlen);
+        log.info([this, &space, addrlen, pname, hash](std::ostream &out) {
+          out << sock << ": new peer " << to_str(&space.addr, addrlen)
+              << ' ' << pname << " hash " << hash;
         });
       } else {
         log.warn([this, &space, addrlen](auto &out) {
@@ -327,7 +328,7 @@ void TCPEgress::Connection::ClientState::deliver(label_t label,
   /* Send the message to each destination, using an appropriate
      emitter. */
   log.detail([&pos](auto &out) {
-    out << "sending to " << pos->second.size();
+    out << "sending to " << pos->second.size() << " dests";
   });
   for (auto &ent : pos->second)
     ent.second->send(base, len, *ent.first.get(), 0);
