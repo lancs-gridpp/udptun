@@ -126,8 +126,7 @@ void EmitterMaker::make(const std::string &name,
   if (sock < 0) return;
 
   std::shared_ptr<Emitter> r =
-    std::shared_ptr<Emitter>(new Emitter(name, chosen->ai_addr,
-                                         chosen->ai_addrlen, sock,
+    std::shared_ptr<Emitter>(new Emitter(name, sock,
                                          chosen->ai_family, chosen->ai_protocol));
   sock = -1;
 
@@ -139,13 +138,23 @@ void EmitterMaker::make(const std::string &name,
   }
 }
 
+static SocketAddress get_socket_name(int sock)
+{
+  union {
+    struct sockaddr addr;
+    unsigned char buf[256];
+  } space;
+  socklen_t addrlen = sizeof space;
+  int rc = getsockname(sock, &space.addr, &addrlen);
+  if (rc != 0)
+    throw std::system_error(errno, std::system_category(), "getsockname");
+  return SocketAddress(&space.addr, addrlen);
+}
 
-
-Emitter::Emitter(const std::string &name, const struct sockaddr *addr,
-                 socklen_t addrlen, int sock, int family, int protocol)
+Emitter::Emitter(const std::string &name, int sock, int family, int protocol)
   : name(name),
     log("udptun.egress.emitter", std::string("emitter:") + name),
-    sock(sock), family(family), protocol(protocol), addr(addr, addrlen) { }
+    sock(sock), family(family), protocol(protocol), addr(get_socket_name(sock)) { }
 
 int Emitter::send(const unsigned char *buf, size_t len,
                   Destination &dst, int flags)

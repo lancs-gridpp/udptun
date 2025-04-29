@@ -82,8 +82,7 @@ private:
   const int family, protocol;
   SocketAddress addr;
 
-  Emitter(const std::string &name, const struct sockaddr *, socklen_t,
-          int sock, int family, int protocol);
+  Emitter(const std::string &name, int sock, int family, int protocol);
 
 public:
   int send(const unsigned char *buf, size_t len, Destination &, int flags);
