@@ -61,6 +61,7 @@ class Destination {
 
 public:
   Destination(const std::string &name, const YAML::Node &cfg);
+  const SocketAddress *peer(int family, int protocol) const;
   void activate();
 
   /* Check whether a socket created using an address result could talk

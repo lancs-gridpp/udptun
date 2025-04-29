@@ -167,9 +167,12 @@ int Emitter::send(const unsigned char *buf, size_t len,
 
   assert(sock >= 0);
   auto rc = dst.send(family, protocol, sock, buf, len, flags);
-  log.detail([rc, this, buf, len](auto &out) {
-    out << "sent from " << addr.str() << ": ";
+  log.detail([rc, this, buf, len, &dst](auto &out) {
+    out << "sent from " << addr.str()
+        << " to " << dst.peer(family, protocol)->str() << ": ";
     Payload::describe(out, buf, len);
+    if (rc != 0)
+      out << ' ' << rc << " (" << strerror(rc) << ')';
   });
 
   /* Standardize the returned error code. */

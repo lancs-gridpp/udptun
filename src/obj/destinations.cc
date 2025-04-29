@@ -104,6 +104,17 @@ bool Destination::check(int family, int protocol) const
   return pos != options.end();
 }
 
+const SocketAddress *Destination::peer(int family, int protocol) const
+{
+  if (!activated)
+    throw std::runtime_error(sformat("too soon to check against dest %s",
+                                     name.c_str()));
+  auto pos = options.find(std::make_pair(family, protocol));
+  if (pos == options.end()) return nullptr;
+  return &pos->second;
+}
+
+
 int Destination::send(int family, int protocol,
                       int sockfd, const unsigned char *buf,
                       size_t len, int flags) const
