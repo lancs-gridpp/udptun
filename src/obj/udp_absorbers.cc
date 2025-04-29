@@ -48,6 +48,7 @@
 #include "sockaddrs.hh"
 #include "messages.hh"
 #include "clientid.hh"
+#include "payloads.hh"
 
 UDPAbsorber::UDPAbsorber(const std::string &name,
                          Scheduler &sched, ClientTable &cltab,
@@ -144,6 +145,10 @@ void UDPAbsorber::sock_ready(uint32_t events)
   if (rc >= 0) {
     SocketAddress saddr(&space.addr, addrlen);
     clid_t clid = cltab.seek(saddr);
+    log.detail([&saddr, rc, this](auto &out) {
+      out << "recv from " << saddr.str() << ": ";
+      Payload::describe(out, buf, rc);
+    });
     for (auto cp : channels)
       cp->submit(clid, buf, rc);
   } else {
