@@ -130,7 +130,7 @@ egress:
         1: [ internal-detailed, shoveler ]
 ```
 
-(The strings `gw00`, `gw01`, `gw02`, `internal-summary`, `internal-detailed`, `shoveler-1`, `shoveler-2`, `shoveler-3` and `shoveler are user-defined.)
+(The strings `gw00`, `gw01`, `gw02`, `internal-summary`, `internal-detailed`, `shoveler-1`, `shoveler-2`, `shoveler-3` and `shoveler` are user-defined.)
 
 The example creates a TCP server socket on `monitor.example.com:9992`, and accepts connections on it, recognizing clients on hosts `10.20.30.1`, `10.20.30.2` and `10.20.30.3` under the user-defined names `gw00`, `gw01` and `gw02`, respectively.
 (Several addresses may be listed per name.)
