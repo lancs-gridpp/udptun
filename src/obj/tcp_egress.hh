@@ -60,8 +60,6 @@ class Destination;
 class Emitter;
 
 class TCPEgress : public Egress {
-  typedef std::map<label_t, std::list<Exit>> exitmap_t;
-
   class Listener {
     friend TCPEgress;
     TCPEgress &parent;
