@@ -162,6 +162,7 @@ class TCPEgress : public Egress {
   IdleEvent idev;
   const bool ipv4, ipv6;
   const std::string host, srv;
+  std::chrono::system_clock::duration client_timeout;
   channelmap_t channels;
   DestinationBank &dbank;
   PeerTable peers;

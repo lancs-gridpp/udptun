@@ -446,6 +446,7 @@ TCPEgress::TCPEgress(const std::string &name,
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>("9999")),
+    client_timeout(std::chrono::hours(1)), // TODO: from cfg["clid_timeout"]
     channels(channels), dbank(dbank),
     peers(&peers) { }
 
@@ -483,7 +484,6 @@ void TCPEgress::flush()
 
   /* Give each remaining connection a chance to clear out old client
      states. */
-  std::chrono::system_clock::duration client_timeout = std::chrono::hours(1);
   auto now = std::chrono::system_clock::now();
   std::for_each(conns.begin(), conns.end(),
                 std::bind(&Connection::flush, std::placeholders::_1,
