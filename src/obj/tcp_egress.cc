@@ -112,11 +112,16 @@ void TCPEgress::Listener::handle_fd(uint32_t)
         break;
 
     default:
-      /* A connection was established.  Make sure we use it. */
+      /* A connection was established.  Match the peer's address
+         against our table, to map it to a peer name and a 'hash
+         code'.  The hash code can be set by user configuration, but
+         defaults to a genuine hash of the peer name. */
       assert(clsock >= 0);
       std::string pname;
       unsigned hash;
       if (parent.peers.seek(pname, hash, &space.addr, addrlen)) {
+        /* Create and retain a new Connection object to handle packets
+           received on the socket. */
         parent.conns.emplace_back(parent, pname, hash,
                                   clsock, &space.addr, addrlen);
         log.info([this, &space, addrlen, pname, hash](std::ostream &out) {
@@ -124,6 +129,7 @@ void TCPEgress::Listener::handle_fd(uint32_t)
               << ' ' << pname << " hash " << hash;
         });
       } else {
+        /* The peer is not recognized, so close the socket. */
         log.warn([this, &space, addrlen](auto &out) {
           out << sock << ": unknown peer " << to_str(&space.addr, addrlen);
         });

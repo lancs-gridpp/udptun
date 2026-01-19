@@ -60,12 +60,22 @@ class Destination;
 class Emitter;
 
 class TCPEgress : public Egress {
+  /* The egress of a TCP tunnel consists of at least one Listener.
+     Each Listener handles a single listening socket, and a tunnel
+     egress might have (say) two to deal with IPv4 and IPv6
+     simultaneously.  In such a case, both sockets are considered to
+     be the egress of the same tunnel. */
   class Listener {
     friend TCPEgress;
     TCPEgress &parent;
     int family, protocol;
     SocketAddress addr;
     int sock;
+
+    /* Called when a connection is ready to be accepted.  If the peer
+       of the connection is recognized, a new Connection object will
+       be created to handle it. TCPEgress::Listener thereby populates
+       TCPEgress::conns. */
     void handle_fd(uint32_t);
     DescriptorEvent fdev;
     void rebind();
@@ -81,6 +91,12 @@ class TCPEgress : public Egress {
   friend class Listener;
   std::list<Listener> listeners;
 
+  /* A TCPEgress::Connection manages a single stream socket accepted
+     by a TCPEgress::Listener.  It reads into a buffer, and checks for
+     a complete message, parses out the fields (which includes a
+     peer-defined clid_t), and delivers to a
+     TCPEgress::Connection::ClientState indexed by the clid_t.  A
+     ClientState is created for the clid_t if nor defined. */
   class Connection {
     friend TCPEgress;
     TCPEgress &parent;
@@ -94,6 +110,13 @@ class TCPEgress : public Egress {
     DescriptorEvent fdev;
     SocketAddress peeraddr;
 
+    /* A ClientState contains a mapping from label to a set of
+       Destinations and the emitters that should be used with them.  A
+       payload can be delivered to the client state, along with a
+       label.  The payload is immediately sent to all destinations
+       using the corresponding emitters.  For housekeeping, a
+       timestamp is set on each delivery, and the user can check if
+       this stamp is older than a given epoch. */
     class ClientState {
       Logger log;
       std::chrono::system_clock::time_point last_used;
@@ -105,7 +128,14 @@ class TCPEgress : public Egress {
                   const std::string &pname,
                   clid_t clid,
                   unsigned hash, channelmap_t &, DestinationBank &, Scheduler &);
+
+      /* Deliver a payload to all destinations indicated by a label.
+         Reset the timestamp.  Do nothing if the label is not
+         recognized. */
       void deliver(label_t, const unsigned char *, std::size_t);
+
+      /* Test whether a delivery was made since an epoch.  Return
+         false if it has. */
       bool expired(std::chrono::system_clock::time_point epoch) {
         return last_used < epoch;
       }
