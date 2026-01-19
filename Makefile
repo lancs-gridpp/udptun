@@ -27,6 +27,7 @@ MYABSPATH=$(foreach f,$1,$(if $(patsubst /%,,$f),$(MYCURDIR)$f,$f))
 
 binaries.cc += udptun
 udptun_obj += clientid
+udptun_obj += cfghelp
 udptun_obj += sockaddrs
 udptun_obj += destinations
 udptun_obj += destbank
