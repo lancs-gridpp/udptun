@@ -45,6 +45,8 @@
 
 #include <sstream>
 #include <string>
+#include <algorithm>
+#include <functional>
 
 #include "tcp_egress.hh"
 #include "destruction.hh"
@@ -451,10 +453,35 @@ bool TCPEgress::Listener::flushable()
   return sock < 0 && !rbev;
 }
 
+void TCPEgress::Connection::flush(std::chrono::system_clock::time_point epoch)
+{
+  /* Ask each client state if it has been used since the given epoch.
+     If not, remove it. */
+  for (auto iter = clstats.begin(); iter != clstats.end(); ) {
+    if (iter->second.expired(epoch)) {
+      auto clid = iter->first;
+      parent.log.detail([this, clid](auto &out) {
+        out << name << ": dropping " << clid << '/' << hash;
+      });
+      iter = clstats.erase(iter);
+    } else {
+      ++iter;
+    }
+  }
+}
+
 void TCPEgress::flush()
 {
   /* Go through all connections, deleting those which are closed. */
   conns.remove_if([](Connection &c) { return c.flushable(); });
+
+  /* Give each remaining connection a chance to clear out old client
+     states. */
+  std::chrono::system_clock::duration client_timeout = std::chrono::hours(1);
+  auto now = std::chrono::system_clock::now();
+  std::for_each(conns.begin(), conns.end(),
+                std::bind(&Connection::flush, std::placeholders::_1,
+                          now - client_timeout));
 
   /* Go through all listeners, deleting those which are closed and are
      not expected to re-open. */

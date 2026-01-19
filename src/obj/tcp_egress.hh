@@ -120,6 +120,7 @@ class TCPEgress : public Egress {
                int sock, const struct sockaddr *, socklen_t);
     void deactivate();
     bool flushable();
+    void flush(std::chrono::system_clock::time_point epoch);
     ~Connection();
   };
   friend class Connection;
