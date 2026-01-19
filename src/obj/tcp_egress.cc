@@ -57,6 +57,7 @@
 #include "marshaling.hh"
 #include "addrent.hh"
 #include "destbank.hh"
+#include "cfghelp.hh"
 
 void TCPEgress::Listener::handle_fd(uint32_t)
 {
@@ -446,7 +447,7 @@ TCPEgress::TCPEgress(const std::string &name,
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>("9999")),
-    client_timeout(std::chrono::hours(1)), // TODO: from cfg["clid_timeout"]
+    client_timeout(duration(cfg["clid_timeout"].as<std::string>("1h"))),
     channels(channels), dbank(dbank),
     peers(&peers) { }
 

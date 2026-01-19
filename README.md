@@ -190,6 +190,10 @@ Use an empty string `""` for binding passive sockets (tunnel egresses and all UD
 Booleans `ipv4` and `ipv6` can also be specified, and default to `true`.
 These four parameters are resolved with `getaddrinfo` into internal socket parameters.
 
+(An egress configuration can also configure `clid_timeout` as a duration, e.g., `10s`, `20m`, `1h`.
+Records for client ids not seen from a given peer are discarded after this time.
+The default is `1h`.)
+
 ## Testing
 
 Mostly for testing purposes, you can combine `ingress` and `egress` in one configuration, and then maybe use `netcat` to test datagrams over it.
