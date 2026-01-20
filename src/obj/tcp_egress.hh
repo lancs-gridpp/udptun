@@ -160,6 +160,8 @@ class TCPEgress : public Egress {
   Logger log;
   Scheduler &sched;
   IdleEvent idev;
+  TimedEvent flusher;
+  std::chrono::system_clock::time_point flush_time;
   const bool ipv4, ipv6;
   const std::string host, srv;
   std::chrono::system_clock::duration client_timeout;
@@ -168,6 +170,7 @@ class TCPEgress : public Egress {
   PeerTable peers;
 
   void flush();
+  void set_flush();
 
 public:
   TCPEgress(const std::string &name,

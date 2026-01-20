@@ -443,13 +443,18 @@ TCPEgress::TCPEgress(const std::string &name,
     log("udptun.egress.tunnel.tcp", std::string("egress:") + name),
     sched(sched),
     idev(sched, std::bind(&TCPEgress::flush, this)),
+    flusher(sched, std::bind(&TCPEgress::flush, this)),
+    flush_time(std::chrono::system_clock::now()),
     ipv4(cfg["ipv4"].as<bool>("true")),
     ipv6(cfg["ipv6"].as<bool>("true")),
     host(cfg["host"].as<std::string>("localhost")),
     srv(cfg["port"].as<std::string>("9999")),
     client_timeout(duration(cfg["clid_timeout"].as<std::string>("1h"))),
     channels(channels), dbank(dbank),
-    peers(&peers) { }
+    peers(&peers)
+{
+  set_flush();
+}
 
 bool TCPEgress::Connection::flushable()
 {
@@ -478,8 +483,18 @@ void TCPEgress::Connection::flush(std::chrono::system_clock::time_point epoch)
   }
 }
 
+void TCPEgress::set_flush()
+{
+  flush_time += client_timeout;
+  flusher.set(flush_time);
+}
+
 void TCPEgress::flush()
 {
+  log.debug([this](auto &out) {
+    out << "flushing";
+  });
+
   /* Go through all connections, deleting those which are closed. */
   conns.remove_if([](Connection &c) { return c.flushable(); });
 
@@ -493,6 +508,8 @@ void TCPEgress::flush()
   /* Go through all listeners, deleting those which are closed and are
      not expected to re-open. */
   listeners.remove_if([](Listener &c) { return c.flushable(); });
+
+  set_flush();
 }
 
 void TCPEgress::activate()
