@@ -139,6 +139,8 @@ class TCPEgress : public Egress {
       bool expired(std::chrono::system_clock::time_point epoch) {
         return last_used < epoch;
       }
+
+      std::string describe();
     };
 
     std::map<clid_t, ClientState> clstats;
@@ -151,6 +153,7 @@ class TCPEgress : public Egress {
     void deactivate();
     bool flushable();
     void flush(std::chrono::system_clock::time_point epoch);
+    std::string describe();
     ~Connection();
   };
   friend class Connection;

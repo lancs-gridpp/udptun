@@ -55,6 +55,7 @@
 #include "emitters.hh"
 #include "destinations.hh"
 #include "payloads.hh"
+#include "jsonout.hh"
 
 EmitterMaker::EmitterMaker(destination_set_t &required)
   : required(required), info(nullptr), chosen(nullptr), sock(-1)
@@ -183,6 +184,19 @@ int Emitter::send(const unsigned char *buf, size_t len,
   if (rc != 0) return rc;
 
   return 0;
+}
+
+std::string Emitter::describe()
+{
+  std::stringstream r;
+  r << '{';
+  json_maplet(r, "name", name, true);
+  json_maplet(r, "socket", sock);
+  json_maplet(r, "family", af_to_str(family));
+  json_maplet(r, "protocol", proto_to_str(protocol));
+  json_maplet(r, "address", addr.str());
+  r << '}';
+  return r.str();
 }
 
 Emitter::~Emitter()

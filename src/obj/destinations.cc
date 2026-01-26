@@ -49,6 +49,7 @@
 #include "formatting.hh"
 #include "network.hh"
 #include "payloads.hh"
+#include "jsonout.hh"
 
 Destination::Destination(const std::string &name, const YAML::Node &cfg)
   : name(name),
@@ -59,6 +60,20 @@ Destination::Destination(const std::string &name, const YAML::Node &cfg)
          : std::string("localhost")),
     srv(cfg ? cfg["port"].as<std::string>() : std::string()),
     activated(false) { }
+
+std::string Destination::describe()
+{
+  std::stringstream r;
+  r << '{';
+  json_maplet(r, "name", name, true);
+  json_maplet(r, "host", host);
+  json_maplet(r, "srv", srv);
+  json_maplet(r, "ipv4", ipv4);
+  json_maplet(r, "ipv6", ipv6);
+  json_maplet(r, "active", activated);
+  r << '}';
+  return r.str();
+}
 
 void Destination::activate()
 {

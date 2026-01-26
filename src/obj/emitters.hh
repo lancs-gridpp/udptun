@@ -87,6 +87,7 @@ private:
 public:
   int send(const unsigned char *buf, size_t len, Destination &, int flags);
   ~Emitter();
+  std::string describe();
 };
 
 #endif

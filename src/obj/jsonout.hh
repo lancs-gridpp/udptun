@@ -33,50 +33,20 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef destinations_included
-#define destinations_included
 
-#include <sys/types.h>
-#include <sys/socket.h>
+#ifndef jsonout_included
+#define jsonout_included
 
+#include <ostream>
 #include <string>
-#include <map>
-#include <vector>
 
-#include <yaml-cpp/yaml.h>
-
-#include "logger.hh"
-#include "sockaddrs.hh"
-
-struct addrinfo;
-
-class Destination {
-  const std::string name;
-  mutable Logger log;
-  const bool ipv4, ipv6;
-  const std::string host, srv;
-  bool activated;
-
-  std::map<std::pair<int, int>, SocketAddress> options;
-
-public:
-  Destination(const std::string &name, const YAML::Node &cfg);
-  const SocketAddress *peer(int family, int protocol) const;
-  void activate();
-
-  /* Check whether a socket created using an address result could talk
-     to this destination. */
-  bool check(const struct addrinfo &) const;
-  bool check(int family, int protocol) const;
-
-  /* Match the address family and protocol of the given socket to a
-     resolved socket address, and send the data.  Return ENOSYS if
-     there is no matching family and protocol.  Returns 0 on
-     success. */
-  int send(int family, int protocol,
-           int sockfd, const unsigned char *buf, size_t len, int flags) const;
-
-  std::string describe();
-};
+template <class V>
+void json_maplet(std::ostream &out,
+		 const std::string &k,
+		 const V &v, bool first = false)
+{
+  if (!first) out << ',';
+  out << "\"" << k << "\":\"" << v << "\"";
+}
 
 #endif

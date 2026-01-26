@@ -58,6 +58,7 @@
 #include "addrent.hh"
 #include "destbank.hh"
 #include "cfghelp.hh"
+#include "jsonout.hh"
 
 void TCPEgress::Listener::handle_fd(uint32_t)
 {
@@ -326,6 +327,50 @@ TCPEgress::Connection::ClientState::ClientState(const std::string &ename,
   }
 }
 
+std::string TCPEgress::Connection::describe()
+{
+  std::stringstream r;
+  r << '{';
+  json_maplet(r, "name", name, true);
+  json_maplet(r, "hash", hash);
+  json_maplet(r, "socket", sock);
+  json_maplet(r, "peer", peeraddr.str());
+  r << ",\"clients\":[";
+  const char *sep = "";
+  for (auto iter = clstats.begin(); iter != clstats.end(); iter++) {
+    r << sep << '{';
+    json_maplet(r, "client", iter->first, true);
+    r << ",\"entry\":[" << iter->second.describe() << "]";
+    r << "}";
+    sep = ",";
+  }
+  r << ']';
+  r << '}';
+  return r.str();
+}
+
+std::string TCPEgress::Connection::ClientState::describe()
+{
+  std::stringstream r;
+  const char *sep1 = "";
+  for (auto iter1 = outlets.begin(); iter1 != outlets.end(); iter1++) {
+    r << sep1 << '{';
+    json_maplet(r, "label", iter1->first, true);
+    r << ",\"outlets\":{";
+    const char *sep2 = "";
+    for (auto iter2 = iter1->second.begin();
+         iter2 != iter1->second.end(); iter2++) {
+      r << sep2 << "\"destination\":" << iter2->first->describe();
+      r << ",\"emitter\":" << iter2->second->describe();
+      sep2 = ",";
+    }
+    r << "}";
+    r << "}";
+    sep1 = ",";
+  }
+  return r.str();
+}
+
 void TCPEgress::Connection::ClientState::deliver(label_t label,
                                                  const unsigned char *base,
                                                  std::size_t len)
@@ -493,6 +538,16 @@ void TCPEgress::flush()
 {
   log.debug([this](auto &out) {
     out << "flushing";
+  });
+
+  log.trace([this](auto &out) {
+    out << '[';
+    const char *sep = "";
+    for (auto iter = conns.begin(); iter != conns.end(); iter++) {
+      out << sep << iter->describe();
+      sep = ",";
+    }
+    out << ']';
   });
 
   /* Go through all connections, deleting those which are closed. */
