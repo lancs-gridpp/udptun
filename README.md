@@ -238,6 +238,21 @@ logging:
 
 `file` specifies an output file, and defaults to `stderr`.
 Sending `SIGUSR1` to the process causes the process to close and re-open this file, to support log rotation.
+For example, you could define `/etc/logrotate.d/udptun` as:
+
+```
+/var/log/udptun.log {
+  daily
+  missingok
+  rotate 10
+  compress
+  delaycompress
+  notifempty
+  postrotate
+    /usr/bin/killall -USR1 udptun
+  endscript
+}
+```
 
 `level` indicates one of several levels of detail:
 
@@ -254,6 +269,13 @@ Sending `SIGUSR1` to the process causes the process to close and re-open this fi
 `children` lists program components for overriding the detail level.
 Each component can also have `children` and `level` fields.
 The example specifies that the component `udptun:egress:tunnel` and subcomponents are logged using the `trace` level of detail.
+
+Log entries take the form `timestamp level component message`.
+For example:
+
+```
+2026-01-28T13:54:36.937582Z DEBUG egress:main flushing
+```
 
 ## SystemD service
 
