@@ -73,6 +73,7 @@
 #include "destbank.hh"
 #include "clientid.hh"
 #include "peers.hh"
+#include "destruction.hh"
 
 template <class T>
 static void populate(std::map<std::string, std::shared_ptr<T>> &dst,
@@ -118,6 +119,8 @@ int main(int argc, const char *const *argv)
       throw std::system_error(errno, std::system_category(), "sigaddset(INT)");
     if (sigaddset(&okay_sigs, SIGTERM) < 0)
       throw std::system_error(errno, std::system_category(), "sigaddset(TERM)");
+    if (sigaddset(&okay_sigs, SIGUSR1) < 0)
+      throw std::system_error(errno, std::system_category(), "sigaddset(USR1)");
     if (sigaddset(&okay_sigs, SIGUSR2) < 0)
       throw std::system_error(errno, std::system_category(), "sigaddset(USR2)");
     if (sigprocmask(SIG_BLOCK, &okay_sigs, nullptr) < 0)
@@ -164,6 +167,8 @@ static int trapped_main(Logger &log, Config &config)
     sigset_t poll_sigs;
     if (sigemptyset(&poll_sigs) < 0)
       throw std::system_error(errno, std::system_category(), "sigemptyset");
+    if (sigaddset(&poll_sigs, SIGUSR1) < 0)
+      throw std::system_error(errno, std::system_category(), "sigaddset(USR1)");
     if (sigaddset(&poll_sigs, SIGUSR2) < 0)
       throw std::system_error(errno, std::system_category(), "sigaddset(USR2)");
     if (sigaddset(&poll_sigs, SIGINT) < 0)
@@ -179,6 +184,16 @@ static int trapped_main(Logger &log, Config &config)
 
   Quota quota;
 
+  YAML::Node *root_ptr = nullptr;
+  SignalEvent rotate(sched, [&root_ptr, &rotate, &log]() {
+    if (root_ptr) {
+      Logging::configure((*root_ptr)["logging"]);
+      log.info("rotation");
+    }
+    rotate.set(SIGUSR1);
+  });
+  rotate.set(SIGUSR1);
+
   bool more;
   IdleEvent idle(sched, [&idle]() { idle.set(); });
   idle.prio(10);
@@ -192,6 +207,11 @@ static int trapped_main(Logger &log, Config &config)
     /* (Re-)load configuration. */
     log.info("reading config");
     YAML::Node root = config.get();
+    root_ptr = &root;
+    LegacyDestructor root_ptr_dest([&root_ptr]() {
+      root_ptr = nullptr;
+      std::cerr << "cleared" << std::endl;
+    });
 
     Logging::configure(root["logging"]);
 
