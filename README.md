@@ -115,11 +115,15 @@ egress:
       - shoveler-3
   peers:
     gw00:
-      - 10.20.30.1
+      hosts:
+        - 10.20.30.1
     gw01:
-      - 10.20.30.2
+      hosts:
+        - 10.20.30.2
     gw02:
-      - 10.20.30.3
+      hash: 4
+      hosts:
+        - 10.20.30.3
   tunnels:
     main:
       tcp:
@@ -137,7 +141,7 @@ The example creates a TCP server socket on `monitor.example.com:9992`, and accep
 Encapsulated datagrams are received on these connections, and decapsulated.
 Each datagram is tagged with a 16-bit label and a 16-bit client id.
 Any datagram labelled with `0` is sent to `localhost:10000`.
-Any datagram labelled with `1` is sent to `localhost:10001` and one of the `shoveler` destinations, chosen by hashing on the peer name.
+Any datagram labelled with `1` is sent to `localhost:10001` and one of the `shoveler` destinations, chosen by hashing on the peer name (`gw00`, etc), or taken from the `hash` field (as is the case for `gw02`).
 
 Datagrams are sent from dynamically created local sockets.
 Datagrams from different peers or different client ids are sent from different sockets, so they will appear to have distinct identities when received by the various destinations.
