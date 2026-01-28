@@ -218,6 +218,44 @@ queues:
   quota: 100k
 ```
 
+## Logging
+
+The top-level field `logging` configures logging.
+For example:
+
+```
+logging:
+  file: /var/log/udptun.log
+  level: info
+  children:
+    udptun:
+      children:
+        egress:
+          children:
+            tunnel:
+              level: trace
+```
+
+`file` specifies an output file, and defaults to `stderr`.
+Sending `SIGHUP` to the process causes the process to close and re-open this file, to support log rotation.
+(This will likely be changed to a different signal, e.g. `SIGUSR1`.)
+
+`level` indicates one of several levels of detail:
+
+- `silent`
+- `critical`
+- `error`
+- `warn`
+- `info`
+- `debug`
+- `trace`
+- `detail`
+- `all`
+
+`children` lists program components for overriding the detail level.
+Each component can also have `children` and `level` fields.
+The example specifies that the component `udptun:egress:tunnel` and subcomponents are logged using the `trace` level of detail.
+
 ## SystemD service
 
 With the binary in `/usr/local/bin/udptun`, and configuration in `/etc/udptun.yaml`, you could define a SystemD unit in `/etc/systemd/system/udptun.service` such as this:
