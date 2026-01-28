@@ -237,8 +237,7 @@ logging:
 ```
 
 `file` specifies an output file, and defaults to `stderr`.
-Sending `SIGHUP` to the process causes the process to close and re-open this file, to support log rotation.
-(This will likely be changed to a different signal, e.g. `SIGUSR1`.)
+Sending `SIGUSR1` to the process causes the process to close and re-open this file, to support log rotation.
 
 `level` indicates one of several levels of detail:
 
