@@ -76,7 +76,17 @@ On some systems, you might need to explicitly link some libraries:
 udptun_lib += -lstdc++fs -lanl
 ```
 
-# Configuration
+# Invocation
+
+Plain arguments to `udptun` are configuration files, which are merged together.
+Later files override earlier ones.
+The following switches are also recognized:
+
+- `--no-ingress` &ndash; Ingress configuration will be ignored.
+- `--no-egress` &ndash; Egress configuration will be ignored.
+- `--` &ndash; All subsequent arguments are treated as configuration filenames.
+
+## Configuration
 
 A configuration file is a YAML document with at least one of the following keys: `ingress` (for injecting UDP packets into a TCP tunnel) and `egress` (for extracting them from a tunnel, and redelivering as UDP).
 
@@ -186,7 +196,7 @@ Each datagram from a queue is sent over the TCP socket, encapsulated with its cl
 As described for the egress side, the label determines which destinations a datagram is ultimately delivered to.
 The client id, meanwhile, ensures that distinct datagram senders in the ingress side are represented by distinct senders on the egress side.
 
-## Addresses
+### Addresses
 
 Usually, `host` can be specified wherever `port` can be, and defaults to `localhost`.
 Use an empty string `""` for binding passive sockets (tunnel egresses and all UDP sockets) to `INADDR_ANY`.
@@ -198,11 +208,11 @@ These four parameters are resolved with `getaddrinfo` into internal socket param
 Records for client ids not seen from a given peer are subject to discarding after this time.
 The default is `1h`.)
 
-## Testing
+### Testing
 
 Mostly for testing purposes, you can combine `ingress` and `egress` in one configuration, and then maybe use `netcat` to test datagrams over it.
 
-## Persistence
+### Persistence
 
 Queues are stored in `/var/spool/udptun/` by default, overridden with the likes of:
 
@@ -218,7 +228,7 @@ queues:
   quota: 100k
 ```
 
-## Logging
+### Logging
 
 The top-level field `logging` configures logging.
 For example:
@@ -277,7 +287,7 @@ For example:
 2026-01-28T13:54:36.937582Z DEBUG egress:main flushing
 ```
 
-## SystemD service
+### SystemD service
 
 With the binary in `/usr/local/bin/udptun`, and configuration in `/etc/udptun.yaml`, you could define a SystemD unit in `/etc/systemd/system/udptun.service` such as this:
 
